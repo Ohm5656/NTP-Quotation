@@ -4,25 +4,47 @@ import type {
 
 import "@/app/globals.css";
 
-import { AppSidebar } from "@/components/layout/AppSidebar";
-import { AppHeader } from "@/components/layout/AppHeader";
+import {
+  AppSidebar,
+} from "@/components/layout/AppSidebar";
+
+import {
+  AppHeader,
+} from "@/components/layout/AppHeader";
 
 export const metadata: Metadata = {
   title: {
     default:
       "NTP Quotation Management",
+
     template:
       "%s | NTP Quotation Management",
   },
 
   description:
     "Quotation management system for NTP Electric and Engineering Co., Ltd.",
+
+  icons: {
+    icon: [
+      {
+        url: "/ntp-logo.png",
+        type: "image/png",
+      },
+    ],
+
+    shortcut:
+      "/ntp-logo.png",
+
+    apple:
+      "/ntp-logo.png",
+  },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }>) {
   return (
     <html lang="th">

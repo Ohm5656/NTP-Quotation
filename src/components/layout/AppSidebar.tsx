@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import {
-  CalendarDays,
   CalendarRange,
   FileText,
   LayoutDashboard,
@@ -26,15 +25,8 @@ const navigation = [
     href: "/quotations",
     icon: FileText,
   },
-
   {
-    name: "รายงานรายเดือน",
-    href: "/reports/monthly",
-    icon: CalendarDays,
-  },
-
-  {
-    name: "รายงานรายปี",
+    name: "รายงาน",
     href: "/reports/yearly",
     icon: CalendarRange,
   },
