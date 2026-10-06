@@ -1,0 +1,1176 @@
+"use client";
+
+import {
+  Building2,
+  CalendarDays,
+  FileText,
+  Mail,
+  Save,
+  UserRound,
+  Wallet,
+  X,
+} from "lucide-react";
+
+import {
+  useActionState,
+  useEffect,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  createQuotation,
+  type CreateQuotationState,
+} from "@/app/quotations/actions";
+
+import type {
+  CustomerOption,
+} from "@/types/database";
+
+type Props = {
+  customers:
+    CustomerOption[];
+
+  defaultDate: string;
+
+  mode?:
+    | "page"
+    | "modal";
+
+  onCancel?: () => void;
+
+  onSuccess?: () => void;
+
+  onDirtyChange?: (
+    dirty: boolean,
+  ) => void;
+};
+
+const initialState:
+  CreateQuotationState = {
+    success: false,
+  };
+
+function FieldError({
+  message,
+}: {
+  message?: string;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <p
+      className="
+        mt-1.5
+        text-xs
+        font-medium
+        text-[#df001b]
+      "
+    >
+      {message}
+    </p>
+  );
+}
+
+export function QuotationCreateForm({
+  customers,
+  defaultDate,
+  mode = "page",
+  onCancel,
+  onSuccess,
+  onDirtyChange,
+}: Props) {
+  const router =
+    useRouter();
+
+  const [
+    state,
+    formAction,
+    pending,
+  ] = useActionState(
+    createQuotation,
+    initialState,
+  );
+
+  /*
+   * หลังบันทึกสำเร็จ
+   */
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    onDirtyChange?.(
+      false,
+    );
+
+    /*
+     * Modal:
+     * ปิดแล้ว refresh หน้าเดิม
+     * Search / Filter จะยังอยู่
+     */
+    if (
+      mode ===
+      "modal"
+    ) {
+      onSuccess?.();
+
+      router.refresh();
+
+      return;
+    }
+
+    /*
+     * หน้า /new สำรอง
+     */
+    router.push(
+      "/quotations",
+    );
+
+    router.refresh();
+  }, [
+    state.success,
+    mode,
+    onSuccess,
+    onDirtyChange,
+    router,
+  ]);
+
+  function handleCancel() {
+    if (onCancel) {
+      onCancel();
+
+      return;
+    }
+
+    router.push(
+      "/quotations",
+    );
+  }
+
+  const isModal =
+    mode === "modal";
+
+  return (
+    <form
+      action={
+        formAction
+      }
+      onChangeCapture={() => {
+        onDirtyChange?.(
+          true,
+        );
+      }}
+      className={
+        isModal
+          ? `
+              flex
+              min-h-0
+              flex-1
+              flex-col
+              overflow-hidden
+              bg-white
+            `
+          : `
+              overflow-hidden
+              rounded-2xl
+              border
+              border-[#e5e7eb]
+              bg-white
+              shadow-[0_2px_8px_rgba(16,24,40,0.04)]
+            `
+      }
+    >
+      {/* =====================================================
+       * Page mode header
+       *
+       * Modal มี Header ของตัวเองแล้ว
+       * =================================================== */}
+      {!isModal && (
+        <div
+          className="
+            relative
+            border-b
+            border-[#eaecf0]
+            px-6
+            py-5
+            md:px-7
+          "
+        >
+          <div
+            className="
+              absolute
+              bottom-0
+              left-0
+              top-0
+              w-1
+              bg-[#df001b]
+            "
+          />
+
+          <div
+            className="
+              flex
+              items-start
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-lg
+                bg-[#eef2ff]
+                text-[#17379c]
+              "
+            >
+              <FileText
+                size={20}
+              />
+            </div>
+
+            <div>
+              <h2
+                className="
+                  text-lg
+                  font-bold
+                  text-[#172033]
+                "
+              >
+                ข้อมูลใบเสนอราคา
+              </h2>
+
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  text-[#667085]
+                "
+              >
+                กรอกข้อมูลตามใบเสนอราคาของบริษัท
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+       * Error
+       * =================================================== */}
+      {state.error && (
+        <div
+          className="
+            mx-6
+            mt-4
+            shrink-0
+            rounded-lg
+            border
+            border-[#f1c7cc]
+            bg-[#fff5f6]
+            px-4
+            py-3
+            text-sm
+            font-medium
+            text-[#b80017]
+          "
+        >
+          {state.error}
+        </div>
+      )}
+
+      {/* =====================================================
+       * Scrollable Body
+       * =================================================== */}
+      <div
+        className={
+          isModal
+            ? `
+                flex-1
+                space-y-7
+                overflow-y-auto
+                px-6
+                py-5
+                md:px-7
+              `
+            : `
+                space-y-8
+                p-6
+                md:p-7
+              `
+        }
+      >
+        {/* =================================================
+         * Document
+         * =============================================== */}
+        <section>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <CalendarDays
+              size={18}
+              className="
+                text-[#17379c]
+              "
+            />
+
+            <h3
+              className="
+                text-sm
+                font-bold
+                text-[#172033]
+              "
+            >
+              ข้อมูลเอกสาร
+            </h3>
+          </div>
+
+          <div
+            className="
+              grid
+              gap-5
+              md:grid-cols-2
+              xl:grid-cols-3
+            "
+          >
+            {/* Date */}
+            <div>
+              <label
+                htmlFor="quotation_date"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                วันที่
+
+                <span
+                  className="
+                    ml-1
+                    text-[#df001b]
+                  "
+                >
+                  *
+                </span>
+              </label>
+
+              <input
+                id="quotation_date"
+                name="quotation_date"
+                type="text"
+                defaultValue={
+                  defaultDate
+                }
+                placeholder="06/10/2569"
+                inputMode="numeric"
+                className="
+                  h-11
+                  w-full
+                  rounded-lg
+                  border
+                  border-[#d0d5dd]
+                  bg-white
+                  px-3
+                  text-sm
+                  text-[#172033]
+                  outline-none
+                  transition
+                  focus:border-[#17379c]
+                  focus:ring-2
+                  focus:ring-[#17379c]/10
+                "
+              />
+
+              <p
+                className="
+                  mt-1.5
+                  text-[11px]
+                  text-[#98a2b3]
+                "
+              >
+                วัน / เดือน / พ.ศ.
+              </p>
+
+              <FieldError
+                message={
+                  state
+                    .fieldErrors
+                    ?.quotationDate
+                }
+              />
+            </div>
+
+            {/* Quotation */}
+            <div>
+              <label
+                htmlFor="quotation_no"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                เลขใบเสนอราคา
+
+                <span
+                  className="
+                    ml-1
+                    text-[#df001b]
+                  "
+                >
+                  *
+                </span>
+              </label>
+
+              <div className="relative">
+                <div
+                  className="
+                    absolute
+                    bottom-0
+                    left-0
+                    top-0
+                    flex
+                    w-11
+                    items-center
+                    justify-center
+                    rounded-l-lg
+                    border-r
+                    border-[#d0d5dd]
+                    bg-[#f8f9fc]
+                    text-sm
+                    font-bold
+                    text-[#17379c]
+                  "
+                >
+                  Q
+                </div>
+
+                <input
+                  id="quotation_no"
+                  name="quotation_no"
+                  type="text"
+                  placeholder="6909033"
+                  autoComplete="off"
+                  className="
+                    h-11
+                    w-full
+                    rounded-lg
+                    border
+                    border-[#d0d5dd]
+                    bg-white
+                    pl-14
+                    pr-3
+                    text-sm
+                    font-medium
+                    text-[#172033]
+                    outline-none
+                    transition
+                    focus:border-[#17379c]
+                    focus:ring-2
+                    focus:ring-[#17379c]/10
+                  "
+                />
+              </div>
+
+              <FieldError
+                message={
+                  state
+                    .fieldErrors
+                    ?.quotationNo
+                }
+              />
+            </div>
+
+            {/* BOQ */}
+            <div>
+              <label
+                htmlFor="boq_no"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                BOQ
+              </label>
+
+              <div className="relative">
+                <div
+                  className="
+                    absolute
+                    bottom-0
+                    left-0
+                    top-0
+                    flex
+                    w-[58px]
+                    items-center
+                    justify-center
+                    rounded-l-lg
+                    border-r
+                    border-[#d0d5dd]
+                    bg-[#f8f9fc]
+                    text-xs
+                    font-bold
+                    text-[#17379c]
+                  "
+                >
+                  BOQ
+                </div>
+
+                <input
+                  id="boq_no"
+                  name="boq_no"
+                  type="text"
+                  placeholder="6909011"
+                  autoComplete="off"
+                  className="
+                    h-11
+                    w-full
+                    rounded-lg
+                    border
+                    border-[#d0d5dd]
+                    bg-white
+                    pl-[70px]
+                    pr-3
+                    text-sm
+                    text-[#172033]
+                    outline-none
+                    transition
+                    focus:border-[#17379c]
+                    focus:ring-2
+                    focus:ring-[#17379c]/10
+                  "
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div
+          className="
+            h-px
+            bg-[#eaecf0]
+          "
+        />
+
+        {/* =================================================
+         * Customer / Project
+         * =============================================== */}
+        <section>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <Building2
+              size={18}
+              className="
+                text-[#17379c]
+              "
+            />
+
+            <h3
+              className="
+                text-sm
+                font-bold
+                text-[#172033]
+              "
+            >
+              ลูกค้าและงาน
+            </h3>
+          </div>
+
+          <div
+            className="
+              grid
+              gap-5
+              md:grid-cols-2
+            "
+          >
+            {/* Customer */}
+            <div>
+              <label
+                htmlFor="customer_name"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                บริษัท / สาขาลูกค้า
+              </label>
+
+              <input
+                id="customer_name"
+                name="customer_name"
+                type="text"
+                list="customer-options"
+                placeholder="เลือกหรือพิมพ์บริษัทใหม่"
+                autoComplete="off"
+                className="
+                  h-11
+                  w-full
+                  rounded-lg
+                  border
+                  border-[#d0d5dd]
+                  bg-white
+                  px-3
+                  text-sm
+                  text-[#172033]
+                  outline-none
+                  transition
+                  focus:border-[#17379c]
+                  focus:ring-2
+                  focus:ring-[#17379c]/10
+                "
+              />
+
+              <datalist
+                id="customer-options"
+              >
+                {customers.map(
+                  (
+                    customer,
+                  ) => (
+                    <option
+                      key={
+                        customer.id
+                      }
+                      value={
+                        customer.name
+                      }
+                    />
+                  ),
+                )}
+              </datalist>
+
+              <p
+                className="
+                  mt-1.5
+                  text-[11px]
+                  text-[#98a2b3]
+                "
+              >
+                เลือกลูกค้าเดิม
+                หรือพิมพ์ชื่อลูกค้าใหม่ได้
+              </p>
+            </div>
+
+            {/* Project */}
+            <div>
+              <label
+                htmlFor="project_name"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                ชื่องาน
+
+                <span
+                  className="
+                    ml-1
+                    text-[#df001b]
+                  "
+                >
+                  *
+                </span>
+              </label>
+
+              <textarea
+                id="project_name"
+                name="project_name"
+                rows={3}
+                placeholder="กรอกชื่องาน / รายละเอียดงาน"
+                className="
+                  min-h-[92px]
+                  w-full
+                  resize-y
+                  rounded-lg
+                  border
+                  border-[#d0d5dd]
+                  bg-white
+                  px-3
+                  py-2.5
+                  text-sm
+                  leading-6
+                  text-[#172033]
+                  outline-none
+                  transition
+                  focus:border-[#17379c]
+                  focus:ring-2
+                  focus:ring-[#17379c]/10
+                "
+              />
+
+              <FieldError
+                message={
+                  state
+                    .fieldErrors
+                    ?.projectName
+                }
+              />
+            </div>
+          </div>
+        </section>
+
+        <div
+          className="
+            h-px
+            bg-[#eaecf0]
+          "
+        />
+
+        {/* =================================================
+         * Amount / PO
+         * =============================================== */}
+        <section>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <Wallet
+              size={18}
+              className="
+                text-[#17379c]
+              "
+            />
+
+            <h3
+              className="
+                text-sm
+                font-bold
+                text-[#172033]
+              "
+            >
+              มูลค่าและ PO
+            </h3>
+          </div>
+
+          <div
+            className="
+              grid
+              gap-5
+              md:grid-cols-2
+            "
+          >
+            {/* Amount */}
+            <div>
+              <label
+                htmlFor="total_amount"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                มูลค่า
+
+                <span
+                  className="
+                    ml-1
+                    text-[#df001b]
+                  "
+                >
+                  *
+                </span>
+              </label>
+
+              <div className="relative">
+                <span
+                  className="
+                    absolute
+                    left-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-sm
+                    font-bold
+                    text-[#17379c]
+                  "
+                >
+                  ฿
+                </span>
+
+                <input
+                  id="total_amount"
+                  name="total_amount"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  autoComplete="off"
+                  className="
+                    h-11
+                    w-full
+                    rounded-lg
+                    border
+                    border-[#d0d5dd]
+                    bg-white
+                    pl-8
+                    pr-14
+                    text-right
+                    text-sm
+                    font-semibold
+                    text-[#172033]
+                    outline-none
+                    transition
+                    focus:border-[#17379c]
+                    focus:ring-2
+                    focus:ring-[#17379c]/10
+                  "
+                />
+
+                <span
+                  className="
+                    absolute
+                    right-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-xs
+                    text-[#98a2b3]
+                  "
+                >
+                  บาท
+                </span>
+              </div>
+
+              <FieldError
+                message={
+                  state
+                    .fieldErrors
+                    ?.totalAmount
+                }
+              />
+            </div>
+
+            {/* PO */}
+            <div>
+              <label
+                htmlFor="po"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                PO
+              </label>
+
+              <input
+                id="po"
+                name="po"
+                type="text"
+                placeholder="เช่น PX6900126"
+                autoComplete="off"
+                className="
+                  h-11
+                  w-full
+                  rounded-lg
+                  border
+                  border-[#d0d5dd]
+                  bg-white
+                  px-3
+                  text-sm
+                  text-[#172033]
+                  outline-none
+                  transition
+                  focus:border-[#17379c]
+                  focus:ring-2
+                  focus:ring-[#17379c]/10
+                "
+              />
+            </div>
+          </div>
+        </section>
+
+        <div
+          className="
+            h-px
+            bg-[#eaecf0]
+          "
+        />
+
+        {/* =================================================
+         * Contact
+         * =============================================== */}
+        <section>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <UserRound
+              size={18}
+              className="
+                text-[#17379c]
+              "
+            />
+
+            <h3
+              className="
+                text-sm
+                font-bold
+                text-[#172033]
+              "
+            >
+              ผู้ติดต่อ
+            </h3>
+          </div>
+
+          <div
+            className="
+              grid
+              gap-5
+              md:grid-cols-2
+            "
+          >
+            {/* Attention */}
+            <div>
+              <label
+                htmlFor="attention"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                ชื่อผู้ติดต่อ
+              </label>
+
+              <div className="relative">
+                <UserRound
+                  size={17}
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-[#98a2b3]
+                  "
+                />
+
+                <input
+                  id="attention"
+                  name="attention"
+                  type="text"
+                  placeholder="ชื่อผู้ติดต่อ"
+                  autoComplete="off"
+                  className="
+                    h-11
+                    w-full
+                    rounded-lg
+                    border
+                    border-[#d0d5dd]
+                    bg-white
+                    pl-10
+                    pr-3
+                    text-sm
+                    text-[#172033]
+                    outline-none
+                    transition
+                    focus:border-[#17379c]
+                    focus:ring-2
+                    focus:ring-[#17379c]/10
+                  "
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                "
+              >
+                E-mail
+              </label>
+
+              <div className="relative">
+                <Mail
+                  size={17}
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-[#98a2b3]
+                  "
+                />
+
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="example@company.com"
+                  autoComplete="email"
+                  className="
+                    h-11
+                    w-full
+                    rounded-lg
+                    border
+                    border-[#d0d5dd]
+                    bg-white
+                    pl-10
+                    pr-3
+                    text-sm
+                    text-[#172033]
+                    outline-none
+                    transition
+                    focus:border-[#17379c]
+                    focus:ring-2
+                    focus:ring-[#17379c]/10
+                  "
+                />
+              </div>
+
+              <FieldError
+                message={
+                  state
+                    .fieldErrors
+                    ?.email
+                }
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* =====================================================
+       * Footer
+       *
+       * Modal: อยู่ค้างด้านล่าง
+       * =================================================== */}
+      <div
+        className="
+          flex
+          shrink-0
+          flex-col-reverse
+          justify-between
+          gap-3
+          border-t
+          border-[#eaecf0]
+          bg-[#fafbfc]
+          px-6
+          py-4
+          sm:flex-row
+          sm:items-center
+          md:px-7
+        "
+      >
+        <button
+          type="button"
+          onClick={
+            handleCancel
+          }
+          disabled={
+            pending
+          }
+          className="
+            inline-flex
+            h-11
+            items-center
+            justify-center
+            gap-2
+            rounded-lg
+            border
+            border-[#d0d5dd]
+            bg-white
+            px-4
+            text-sm
+            font-semibold
+            text-[#475467]
+            transition
+            hover:bg-[#f8f9fc]
+            disabled:opacity-50
+          "
+        >
+          <X
+            size={17}
+          />
+
+          ยกเลิก
+        </button>
+
+        <button
+          type="submit"
+          disabled={
+            pending
+          }
+          className="
+            inline-flex
+            h-11
+            items-center
+            justify-center
+            gap-2
+            rounded-lg
+            bg-[#17379c]
+            px-6
+            text-sm
+            font-semibold
+            text-white
+            shadow-sm
+            transition
+            hover:bg-[#10266f]
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
+        >
+          <Save
+            size={17}
+          />
+
+          {pending
+            ? "กำลังบันทึก..."
+            : "บันทึกใบเสนอราคา"}
+        </button>
+      </div>
+    </form>
+  );
+}

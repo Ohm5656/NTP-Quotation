@@ -10,16 +10,12 @@ import type {
   QuotationListItem,
 } from "@/types/database";
 
-import {
-  DeleteQuotationButton,
-} from "@/components/quotations/DeleteQuotationButton";
-
 type Props = {
   quotations:
     QuotationListItem[];
 };
 
-export function QuotationTable({
+export function CustomerQuotationTable({
   quotations,
 }: Props) {
   if (
@@ -37,11 +33,27 @@ export function QuotationTable({
           px-6
           py-16
           text-center
-          text-sm
-          text-[#667085]
         "
       >
-        ไม่พบใบเสนอราคาตามเงื่อนไขที่เลือก
+        <p
+          className="
+            text-sm
+            font-semibold
+            text-[#344054]
+          "
+        >
+          ไม่พบใบเสนอราคา
+        </p>
+
+        <p
+          className="
+            mt-1
+            text-sm
+            text-[#98a2b3]
+          "
+        >
+          ลองเปลี่ยนคำค้นหาหรือช่วงเวลา
+        </p>
       </div>
     );
   }
@@ -60,7 +72,7 @@ export function QuotationTable({
         <table
           className="
             w-full
-            min-w-[1180px]
+            min-w-[1150px]
             border-collapse
           "
         >
@@ -82,7 +94,7 @@ export function QuotationTable({
               </th>
 
               <th className="px-4 py-3">
-                บริษัท / งาน
+                ชื่องาน
               </th>
 
               <th className="px-4 py-3">
@@ -106,17 +118,6 @@ export function QuotationTable({
               <th className="px-4 py-3">
                 ผู้ติดต่อ
               </th>
-
-              <th
-                className="
-                  w-[80px]
-                  px-4
-                  py-3
-                  text-center
-                "
-              >
-                จัดการ
-              </th>
             </tr>
           </thead>
 
@@ -137,7 +138,7 @@ export function QuotationTable({
                     hover:bg-[#fafbff]
                   "
                 >
-                  {/* วันที่ */}
+                  {/* Date */}
                   <td
                     className="
                       whitespace-nowrap
@@ -159,7 +160,7 @@ export function QuotationTable({
                       px-4
                       py-4
                       text-sm
-                      font-semibold
+                      font-bold
                       text-[#17379c]
                     "
                   >
@@ -168,39 +169,26 @@ export function QuotationTable({
                     )}
                   </td>
 
-                  {/* Customer + Project */}
+                  {/* Project */}
                   <td
                     className="
-                      max-w-[380px]
+                      max-w-[420px]
                       px-4
                       py-4
                     "
                   >
-                    <div
+                    <p
                       className="
                         text-sm
                         font-semibold
-                        text-[#172033]
-                      "
-                    >
-                      {displayOrDash(
-                        quotation.customer_name_raw,
-                      )}
-                    </div>
-
-                    <div
-                      className="
-                        mt-1
-                        line-clamp-2
-                        text-xs
                         leading-5
-                        text-[#667085]
+                        text-[#172033]
                       "
                     >
                       {displayOrDash(
                         quotation.project_name,
                       )}
-                    </div>
+                    </p>
                   </td>
 
                   {/* BOQ */}
@@ -238,6 +226,7 @@ export function QuotationTable({
                   {/* PO */}
                   <td
                     className="
+                      whitespace-nowrap
                       px-4
                       py-4
                       text-sm
@@ -252,6 +241,7 @@ export function QuotationTable({
                   {/* Contact */}
                   <td
                     className="
+                      min-w-[180px]
                       px-4
                       py-4
                     "
@@ -278,27 +268,6 @@ export function QuotationTable({
                         quotation.email,
                       )}
                     </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td
-                    className="
-                      px-4
-                      py-4
-                      text-center
-                    "
-                  >
-                    <DeleteQuotationButton
-                      quotationId={
-                        quotation.id
-                      }
-                      quotationNo={
-                        quotation.quotation_no
-                      }
-                      customerId={
-                        quotation.customer_id
-                      }
-                    />
                   </td>
                 </tr>
               ),

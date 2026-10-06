@@ -14,7 +14,7 @@ export function displayOrDash(
 
   if (
     typeof value === "string" &&
-    value === ""
+    value.trim() === ""
   ) {
     return "-";
   }
@@ -101,4 +101,76 @@ export function formatBaht(
   }
 
   return `฿${formatted}`;
+}
+
+/**
+ * เลขใบเสนอราคา
+ *
+ * 6909032  -> Q6909032
+ * Q6909032 -> Q6909032
+ */
+export function formatQuotationNo(
+  value:
+    | string
+    | number
+    | null
+    | undefined,
+): string {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "-";
+  }
+
+  const text =
+    String(value).trim();
+
+  if (!text) {
+    return "-";
+  }
+
+  if (
+    /^Q/i.test(text)
+  ) {
+    return `Q${text.slice(1)}`;
+  }
+
+  return `Q${text}`;
+}
+
+/**
+ * เลข BOQ
+ *
+ * 6909010     -> BOQ6909010
+ * BOQ6909010  -> BOQ6909010
+ */
+export function formatBoqNo(
+  value:
+    | string
+    | number
+    | null
+    | undefined,
+): string {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "-";
+  }
+
+  const text =
+    String(value).trim();
+
+  if (!text) {
+    return "-";
+  }
+
+  if (
+    /^BOQ/i.test(text)
+  ) {
+    return `BOQ${text.slice(3)}`;
+  }
+
+  return `BOQ${text}`;
 }

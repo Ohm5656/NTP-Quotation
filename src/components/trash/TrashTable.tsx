@@ -1,4 +1,8 @@
 import {
+  Trash2,
+} from "lucide-react";
+
+import {
   displayOrDash,
   formatBaht,
   formatBoqNo,
@@ -6,20 +10,64 @@ import {
   formatThaiDate,
 } from "@/lib/format";
 
-import type {
-  QuotationListItem,
-} from "@/types/database";
-
 import {
-  DeleteQuotationButton,
-} from "@/components/quotations/DeleteQuotationButton";
+  RestoreQuotationButton,
+} from "@/components/trash/RestoreQuotationButton";
+
+import type {
+  TrashQuotationItem,
+} from "@/types/trash";
 
 type Props = {
   quotations:
-    QuotationListItem[];
+    TrashQuotationItem[];
 };
 
-export function QuotationTable({
+function formatDeletedAt(
+  value:
+    | string
+    | null,
+) {
+  if (!value) {
+    return "-";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "th-TH-u-ca-buddhist",
+    {
+      timeZone:
+        "Asia/Bangkok",
+
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
+    },
+  ).format(date);
+}
+
+export function TrashTable({
   quotations,
 }: Props) {
   if (
@@ -34,14 +82,38 @@ export function QuotationTable({
           border-dashed
           border-[#d0d5dd]
           bg-white
-          px-6
           py-16
           text-center
-          text-sm
-          text-[#667085]
         "
       >
-        ไม่พบใบเสนอราคาตามเงื่อนไขที่เลือก
+        <Trash2
+          size={30}
+          className="
+            mx-auto
+            mb-3
+            text-[#98a2b3]
+          "
+        />
+
+        <p
+          className="
+            text-sm
+            font-semibold
+            text-[#344054]
+          "
+        >
+          ไม่มีใบเสนอราคาในถังขยะ
+        </p>
+
+        <p
+          className="
+            mt-1
+            text-sm
+            text-[#98a2b3]
+          "
+        >
+          รายการที่ลบจะมาแสดงที่นี่
+        </p>
       </div>
     );
   }
@@ -60,7 +132,7 @@ export function QuotationTable({
         <table
           className="
             w-full
-            min-w-[1180px]
+            min-w-[1200px]
             border-collapse
           "
         >
@@ -100,16 +172,11 @@ export function QuotationTable({
               </th>
 
               <th className="px-4 py-3">
-                PO
-              </th>
-
-              <th className="px-4 py-3">
-                ผู้ติดต่อ
+                ลบเมื่อ
               </th>
 
               <th
                 className="
-                  w-[80px]
                   px-4
                   py-3
                   text-center
@@ -137,7 +204,6 @@ export function QuotationTable({
                     hover:bg-[#fafbff]
                   "
                 >
-                  {/* วันที่ */}
                   <td
                     className="
                       whitespace-nowrap
@@ -152,7 +218,6 @@ export function QuotationTable({
                     )}
                   </td>
 
-                  {/* Quotation */}
                   <td
                     className="
                       whitespace-nowrap
@@ -168,7 +233,6 @@ export function QuotationTable({
                     )}
                   </td>
 
-                  {/* Customer + Project */}
                   <td
                     className="
                       max-w-[380px]
@@ -191,7 +255,6 @@ export function QuotationTable({
                     <div
                       className="
                         mt-1
-                        line-clamp-2
                         text-xs
                         leading-5
                         text-[#667085]
@@ -203,7 +266,6 @@ export function QuotationTable({
                     </div>
                   </td>
 
-                  {/* BOQ */}
                   <td
                     className="
                       whitespace-nowrap
@@ -218,7 +280,6 @@ export function QuotationTable({
                     )}
                   </td>
 
-                  {/* Amount */}
                   <td
                     className="
                       whitespace-nowrap
@@ -235,52 +296,20 @@ export function QuotationTable({
                     )}
                   </td>
 
-                  {/* PO */}
                   <td
                     className="
+                      whitespace-nowrap
                       px-4
                       py-4
                       text-sm
-                      text-[#475467]
+                      text-[#667085]
                     "
                   >
-                    {displayOrDash(
-                      quotation.po,
+                    {formatDeletedAt(
+                      quotation.deleted_at,
                     )}
                   </td>
 
-                  {/* Contact */}
-                  <td
-                    className="
-                      px-4
-                      py-4
-                    "
-                  >
-                    <div
-                      className="
-                        text-sm
-                        text-[#344054]
-                      "
-                    >
-                      {displayOrDash(
-                        quotation.attention,
-                      )}
-                    </div>
-
-                    <div
-                      className="
-                        mt-1
-                        text-xs
-                        text-[#98a2b3]
-                      "
-                    >
-                      {displayOrDash(
-                        quotation.email,
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Actions */}
                   <td
                     className="
                       px-4
@@ -288,12 +317,9 @@ export function QuotationTable({
                       text-center
                     "
                   >
-                    <DeleteQuotationButton
+                    <RestoreQuotationButton
                       quotationId={
                         quotation.id
-                      }
-                      quotationNo={
-                        quotation.quotation_no
                       }
                       customerId={
                         quotation.customer_id

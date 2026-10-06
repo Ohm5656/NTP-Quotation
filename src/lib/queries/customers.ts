@@ -5,25 +5,37 @@ import {
 } from "@/lib/supabase/admin";
 
 import type {
-  CustomerOption,
   QuotationListItem,
 } from "@/types/database";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
-export type QuotationFilters = {
+export type CustomerDetail = {
+  id: string;
+  name: string;
+};
+
+export type CustomerQuotationSummary = {
+  quotationCount: number;
+  totalAmount: number;
+
+  firstQuotationDate:
+    | string
+    | null;
+
+  latestQuotationDate:
+    | string
+    | null;
+};
+
+export type CustomerQuotationFilters = {
   search?: string;
-
   year?: number;
-
   month?: number;
-
-  customerId?: string;
-
   page?: number;
 };
 
-export type QuotationListResult = {
+export type CustomerQuotationResult = {
   items:
     QuotationListItem[];
 
@@ -55,62 +67,36 @@ function cleanSearch(
     .trim();
 }
 
-/**
- * รองรับ:
- *
- * Q6909032
- * q6909032
- * 6909032
- *
- * Database บางรายการเก็บไม่มี Q
- */
 function normalizeQuotationSearch(
   value: string,
 ): string {
   const cleaned =
     value.trim();
 
-  const withoutQ =
+  return (
     cleaned.replace(
       /^Q/i,
       "",
-    );
-
-  return (
-    withoutQ ||
-    cleaned
+    ) || cleaned
   );
 }
 
-/**
- * รองรับ:
- *
- * BOQ6909010
- * boq6909010
- * 6909010
- *
- * Database บางรายการเก็บไม่มี BOQ
- */
 function normalizeBoqSearch(
   value: string,
 ): string {
   const cleaned =
     value.trim();
 
-  const withoutBoq =
+  return (
     cleaned.replace(
       /^BOQ/i,
       "",
-    );
-
-  return (
-    withoutBoq ||
-    cleaned
+    ) || cleaned
   );
 }
 
 /**
- * รองรับการค้นหาราคา:
+ * รองรับ:
  *
  * 402080
  * 402080.00
@@ -159,8 +145,94 @@ function parseAmountSearch(
   return amount;
 }
 
+/**
+ * รองรับ:
+ *
+ * 30/09/2569
+ * 30/09/2026
+ *
+ * return:
+ * 2026-09-30
+ */
+function parseDateSearch(
+  value: string,
+): string | null {
+  const normalized =
+    value.trim();
+
+  const match =
+    normalized.match(
+      /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const day =
+    Number(match[1]);
+
+  const month =
+    Number(match[2]);
+
+  let year =
+    Number(match[3]);
+
+  if (
+    year >= 2400 &&
+    year <= 2700
+  ) {
+    year -= 543;
+  }
+
+  if (
+    year < 1900 ||
+    year > 2300
+  ) {
+    return null;
+  }
+
+  const date =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+      ),
+    );
+
+  const valid =
+    date.getUTCFullYear() ===
+      year &&
+    date.getUTCMonth() + 1 ===
+      month &&
+    date.getUTCDate() ===
+      day;
+
+  if (!valid) {
+    return null;
+  }
+
+  return [
+    String(year).padStart(
+      4,
+      "0",
+    ),
+
+    String(month).padStart(
+      2,
+      "0",
+    ),
+
+    String(day).padStart(
+      2,
+      "0",
+    ),
+  ].join("-");
+}
+
 /* =========================================================
- * Date
+ * Date Range
  * ======================================================= */
 
 function createDateRange(
@@ -183,7 +255,7 @@ function createDateRange(
         "0",
       )}-01`;
 
-    const next =
+    const end =
       new Date(
         Date.UTC(
           gregorianYear,
@@ -199,7 +271,7 @@ function createDateRange(
 
     return {
       start,
-      end: next,
+      end,
     };
   }
 
@@ -213,13 +285,139 @@ function createDateRange(
 }
 
 /* =========================================================
- * Quotations
+ * Customer
  * ======================================================= */
 
-export async function getQuotations(
+export async function getCustomerById(
+  customerId: string,
+): Promise<CustomerDetail | null> {
+  const supabase =
+    createAdminSupabaseClient();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "customers",
+    )
+    .select(
+      "id, name",
+    )
+    .eq(
+      "id",
+      customerId,
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `ไม่สามารถโหลดข้อมูลลูกค้าได้: ${error.message}`,
+    );
+  }
+
+  return data;
+}
+
+/* =========================================================
+ * Summary
+ * ======================================================= */
+
+export async function getCustomerQuotationSummary(
+  customerId: string,
+): Promise<CustomerQuotationSummary> {
+  const supabase =
+    createAdminSupabaseClient();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "quotations",
+    )
+    .select(
+      `
+        quotation_date,
+        total_amount
+      `,
+    )
+    .eq(
+      "customer_id",
+      customerId,
+    )
+    .is(
+      "deleted_at",
+      null,
+    )
+    .range(
+      0,
+      9999,
+    );
+
+  if (error) {
+    throw new Error(
+      `ไม่สามารถโหลดข้อมูลสรุปลูกค้าได้: ${error.message}`,
+    );
+  }
+
+  const rows =
+    data ?? [];
+
+  let totalAmount = 0;
+
+  const dates: string[] =
+    [];
+
+  for (
+    const row of rows
+  ) {
+    totalAmount +=
+      Number(
+        row.total_amount ??
+          0,
+      );
+
+    if (
+      row.quotation_date
+    ) {
+      dates.push(
+        row.quotation_date,
+      );
+    }
+  }
+
+  dates.sort();
+
+  return {
+    quotationCount:
+      rows.length,
+
+    totalAmount,
+
+    firstQuotationDate:
+      dates[0] ??
+      null,
+
+    latestQuotationDate:
+      dates.length
+        ? dates[
+            dates.length -
+              1
+          ]
+        : null,
+  };
+}
+
+/* =========================================================
+ * Customer Quotations
+ * ======================================================= */
+
+export async function getCustomerQuotations(
+  customerId: string,
   filters:
-    QuotationFilters,
-): Promise<QuotationListResult> {
+    CustomerQuotationFilters,
+): Promise<CustomerQuotationResult> {
   const supabase =
     createAdminSupabaseClient();
 
@@ -263,6 +461,10 @@ export async function getQuotations(
           count: "exact",
         },
       )
+      .eq(
+        "customer_id",
+        customerId,
+      )
       .is(
         "deleted_at",
         null,
@@ -297,13 +499,16 @@ export async function getQuotations(
         originalSearch,
       );
 
+    const date =
+      parseDateSearch(
+        originalSearch,
+      );
+
     const conditions: string[] =
       [
         `quotation_no.ilike.%${quotationSearch}%`,
 
         `boq_no.ilike.%${boqSearch}%`,
-
-        `customer_name_raw.ilike.%${search}%`,
 
         `project_name.ilike.%${search}%`,
 
@@ -315,9 +520,7 @@ export async function getQuotations(
       ];
 
     /*
-     * ถ้าข้อความที่พิมพ์
-     * สามารถตีความเป็นราคาได้
-     * ให้ค้น total_amount ด้วย
+     * ราคา
      */
     if (
       amount !== null
@@ -329,34 +532,20 @@ export async function getQuotations(
       );
     }
 
+    /*
+     * วันที่
+     */
+    if (date) {
+      conditions.push(
+        `quotation_date.eq.${date}`,
+      );
+    }
+
     query =
       query.or(
         conditions.join(
           ",",
         ),
-      );
-  }
-
-  /* =======================================================
-   * Customer
-   * ===================================================== */
-
-  if (
-    filters.customerId ===
-    "__blank__"
-  ) {
-    query =
-      query.is(
-        "customer_id",
-        null,
-      );
-  } else if (
-    filters.customerId
-  ) {
-    query =
-      query.eq(
-        "customer_id",
-        filters.customerId,
       );
   }
 
@@ -422,7 +611,7 @@ export async function getQuotations(
 
   if (error) {
     throw new Error(
-      `ไม่สามารถโหลดใบเสนอราคาได้: ${error.message}`,
+      `ไม่สามารถโหลดใบเสนอราคาของลูกค้าได้: ${error.message}`,
     );
   }
 
@@ -453,49 +642,12 @@ export async function getQuotations(
 }
 
 /* =========================================================
- * Customers
+ * Years
  * ======================================================= */
 
-export async function getCustomerOptions(): Promise<
-  CustomerOption[]
-> {
-  const supabase =
-    createAdminSupabaseClient();
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "customers",
-    )
-    .select(
-      "id, name",
-    )
-    .order(
-      "name",
-      {
-        ascending:
-          true,
-      },
-    );
-
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดรายชื่อลูกค้าได้: ${error.message}`,
-    );
-  }
-
-  return data ?? [];
-}
-
-/* =========================================================
- * Available Years
- * ======================================================= */
-
-export async function getAvailableQuotationYears(): Promise<
-  number[]
-> {
+export async function getCustomerQuotationYears(
+  customerId: string,
+): Promise<number[]> {
   const supabase =
     createAdminSupabaseClient();
 
@@ -509,6 +661,10 @@ export async function getAvailableQuotationYears(): Promise<
     .select(
       "quotation_date",
     )
+    .eq(
+      "customer_id",
+      customerId,
+    )
     .is(
       "deleted_at",
       null,
@@ -520,12 +676,12 @@ export async function getAvailableQuotationYears(): Promise<
     )
     .range(
       0,
-      4999,
+      9999,
     );
 
   if (error) {
     throw new Error(
-      `ไม่สามารถโหลดปีได้: ${error.message}`,
+      `ไม่สามารถโหลดปีของลูกค้าได้: ${error.message}`,
     );
   }
 
@@ -542,7 +698,7 @@ export async function getAvailableQuotationYears(): Promise<
       continue;
     }
 
-    const gregorianYear =
+    const year =
       Number(
         row.quotation_date.slice(
           0,
@@ -552,12 +708,11 @@ export async function getAvailableQuotationYears(): Promise<
 
     if (
       Number.isFinite(
-        gregorianYear,
+        year,
       )
     ) {
       years.add(
-        gregorianYear +
-          543,
+        year + 543,
       );
     }
   }

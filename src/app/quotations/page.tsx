@@ -1,18 +1,24 @@
-import Link from "next/link";
-
-import { Plus } from "lucide-react";
-
 import {
   getAvailableQuotationYears,
   getCustomerOptions,
   getQuotations,
 } from "@/lib/queries/quotations";
 
-import { QuotationFilters } from "@/components/quotations/QuotationFilters";
+import {
+  QuotationFilters,
+} from "@/components/quotations/QuotationFilters";
 
-import { QuotationTable } from "@/components/quotations/QuotationTable";
+import {
+  QuotationTable,
+} from "@/components/quotations/QuotationTable";
 
-import { QuotationPagination } from "@/components/quotations/QuotationPagination";
+import {
+  QuotationPagination,
+} from "@/components/quotations/QuotationPagination";
+
+import {
+  CreateQuotationModal,
+} from "@/components/quotations/CreateQuotationModal";
 
 type PageProps = {
   searchParams: Promise<{
@@ -25,68 +31,142 @@ type PageProps = {
 };
 
 function parseNumber(
-  value: string | undefined,
+  value:
+    | string
+    | undefined,
 ): number | undefined {
   if (!value) {
     return undefined;
   }
 
-  const parsed = Number(value);
+  const parsed =
+    Number(value);
 
-  if (!Number.isFinite(parsed)) {
+  if (
+    !Number.isFinite(
+      parsed,
+    )
+  ) {
     return undefined;
   }
 
   return parsed;
 }
 
+/**
+ * วันที่ประเทศไทยปัจจุบัน
+ *
+ * เช่น:
+ * 06/10/2569
+ */
+function getCurrentThaiDate(): string {
+  const formatter =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        timeZone:
+          "Asia/Bangkok",
+
+        day:
+          "2-digit",
+
+        month:
+          "2-digit",
+
+        year:
+          "numeric",
+      },
+    );
+
+  const parts =
+    formatter.formatToParts(
+      new Date(),
+    );
+
+  const day =
+    parts.find(
+      (part) =>
+        part.type ===
+        "day",
+    )?.value ?? "";
+
+  const month =
+    parts.find(
+      (part) =>
+        part.type ===
+        "month",
+    )?.value ?? "";
+
+  const gregorianYear =
+    Number(
+      parts.find(
+        (part) =>
+          part.type ===
+          "year",
+      )?.value ??
+        0,
+    );
+
+  const buddhistYear =
+    gregorianYear +
+    543;
+
+  return `${day}/${month}/${buddhistYear}`;
+}
+
 export default async function QuotationsPage({
   searchParams,
 }: PageProps) {
-  const params = await searchParams;
+  const params =
+    await searchParams;
 
   const search =
-    params.search?.trim() ?? "";
+    params.search?.trim() ??
+    "";
 
   const year =
-    parseNumber(params.year);
+    parseNumber(
+      params.year,
+    );
 
   const month =
-    parseNumber(params.month);
+    parseNumber(
+      params.month,
+    );
 
   const page =
-    parseNumber(params.page) ?? 1;
+    parseNumber(
+      params.page,
+    ) ?? 1;
 
   const customerId =
-    params.customer ?? "";
+    params.customer ??
+    "";
 
-  /*
-   * โหลดข้อมูลพร้อมกันเพื่อลดเวลารอ
-   *
-   * - รายการใบเสนอราคา
-   * - รายชื่อลูกค้า
-   * - ปีที่มีข้อมูล
-   */
   const [
     result,
     customers,
     years,
-  ] = await Promise.all([
-    getQuotations({
-      search,
-      year,
-      month,
-      page,
-      customerId,
-    }),
+  ] =
+    await Promise.all([
+      getQuotations({
+        search,
+        year,
+        month,
+        page,
+        customerId,
+      }),
 
-    getCustomerOptions(),
+      getCustomerOptions(),
 
-    getAvailableQuotationYears(),
-  ]);
+      getAvailableQuotationYears(),
+    ]);
+
+  const defaultDate =
+    getCurrentThaiDate();
 
   /*
-   * เก็บ Filter เดิมไว้ตอนเปลี่ยนหน้า
+   * Pagination จำ Filter เดิม
    */
   const paginationParams: Record<
     string,
@@ -117,7 +197,12 @@ export default async function QuotationsPage({
   }
 
   return (
-    <div className="mx-auto max-w-[1600px]">
+    <div
+      className="
+        mx-auto
+        max-w-[1600px]
+      "
+    >
       {/* =====================================================
        * Header
        * =================================================== */}
@@ -136,12 +221,17 @@ export default async function QuotationsPage({
           <div
             className="
               mb-2
-              flex
+              inline-flex
               items-center
               gap-2
-              text-sm
-              font-semibold
-              text-[#df001b]
+              rounded-full
+              bg-[#fff1f2]
+              px-3
+              py-1
+              text-xs
+              font-bold
+              tracking-wide
+              text-[#c80019]
             "
           >
             <span
@@ -179,28 +269,17 @@ export default async function QuotationsPage({
           </p>
         </div>
 
-        <Link
-          href="/quotations/new"
-          className="
-            inline-flex
-            h-11
-            items-center
-            justify-center
-            gap-2
-            rounded-lg
-            bg-[#df001b]
-            px-5
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-[#b80017]
-          "
-        >
-          <Plus size={18} />
-
-          เพิ่มใบเสนอราคา
-        </Link>
+        {/* =================================================
+         * Modal Trigger
+         * =============================================== */}
+        <CreateQuotationModal
+          customers={
+            customers
+          }
+          defaultDate={
+            defaultDate
+          }
+        />
       </div>
 
       {/* =====================================================
@@ -210,9 +289,13 @@ export default async function QuotationsPage({
         search={search}
         year={year}
         month={month}
-        customerId={customerId}
+        customerId={
+          customerId
+        }
         years={years}
-        customers={customers}
+        customers={
+          customers
+        }
       />
 
       {/* =====================================================
@@ -230,19 +313,37 @@ export default async function QuotationsPage({
         "
       >
         <div>
-          <h2
+          <div
             className="
-              text-lg
-              font-bold
-              text-[#172033]
+              flex
+              items-center
+              gap-2
             "
           >
-            รายการใบเสนอราคา
-          </h2>
+            <span
+              className="
+                h-5
+                w-1
+                rounded-full
+                bg-[#df001b]
+              "
+            />
+
+            <h2
+              className="
+                text-lg
+                font-bold
+                text-[#172033]
+              "
+            >
+              รายการใบเสนอราคา
+            </h2>
+          </div>
 
           <p
             className="
               mt-1
+              pl-3
               text-sm
               text-[#667085]
             "
@@ -258,16 +359,18 @@ export default async function QuotationsPage({
           "
         >
           ทั้งหมด{" "}
+
           <strong
             className="
-              font-semibold
-              text-[#172033]
+              font-bold
+              text-[#17379c]
             "
           >
             {result.total.toLocaleString(
               "th-TH",
             )}
           </strong>{" "}
+
           รายการ
         </span>
       </div>
@@ -276,18 +379,24 @@ export default async function QuotationsPage({
        * Table
        * =================================================== */}
       <QuotationTable
-        quotations={result.items}
+        quotations={
+          result.items
+        }
       />
 
       {/* =====================================================
        * Pagination
        * =================================================== */}
       <QuotationPagination
-        page={result.page}
+        page={
+          result.page
+        }
         totalPages={
           result.totalPages
         }
-        total={result.total}
+        total={
+          result.total
+        }
         params={
           paginationParams
         }

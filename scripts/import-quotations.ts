@@ -44,6 +44,63 @@ const excelPath =
 
 const commit = process.argv.includes("--commit");
 
+/**
+ * Manual date corrections confirmed from the company workbook/context.
+ *
+ * Important:
+ * - Database still keeps source_date_raw unchanged for traceability.
+ * - quotationNo is compared after removing an optional leading "Q",
+ *   because Excel formatting may display Q while the imported cell value
+ *   is numeric/text without Q.
+ */
+const MANUAL_DATE_CORRECTIONS: Record<
+  number,
+  {
+    quotationNo: string;
+    quotationDate: string;
+  }
+> = {
+  // Excel Date = "PX"; confirmed from adjacent rows as 28/04/2023.
+  170: {
+    quotationNo: "6604033",
+    quotationDate: "2023-04-28",
+  },
+
+  // Excel Date incorrectly stored as 27/06/1918.
+  // Confirmed correct date: 19/01/2024.
+  448: {
+    quotationNo: "6701032",
+    quotationDate: "2024-01-19",
+  },
+
+  // These six rows were stored with year 2004 in Excel.
+  // The sequence and quotation period confirm September 2024.
+  742: {
+    quotationNo: "6709012",
+    quotationDate: "2024-09-12",
+  },
+  743: {
+    quotationNo: "6709013",
+    quotationDate: "2024-09-13",
+  },
+  744: {
+    quotationNo: "6709014",
+    quotationDate: "2024-09-13",
+  },
+  745: {
+    quotationNo: "6709015",
+    quotationDate: "2024-09-14",
+  },
+  746: {
+    quotationNo: "6709016",
+    quotationDate: "2024-09-14",
+  },
+  747: {
+    quotationNo: "6709017",
+    quotationDate: "2024-09-14",
+  },
+};
+
 type CellValue =
   | ExcelJS.CellValue
   | null
@@ -767,13 +824,39 @@ async function main() {
       sourceValueToString(
         row.getCell(1),
       );
+
+    /*
+     * Apply only explicitly confirmed manual corrections.
+     *
+     * We normalize an optional "Q" prefix only for comparison.
+     * The original quotation_no and source_date_raw are not changed.
+     */
+    const manualDateCorrection =
+      MANUAL_DATE_CORRECTIONS[rowNumber];
+
+    if (manualDateCorrection) {
+      const normalizedQuotationNo =
+        quotationNo
+          ?.trim()
+          .replace(/^Q/i, "") ??
+        "";
+
       if (
-  rowNumber === 170 &&
-  quotationNo === "6604033" &&
-  sourceDateRaw === "PX"
-) {
-  quotationDate = "2023-04-28";
-}
+        normalizedQuotationNo !==
+        manualDateCorrection.quotationNo
+      ) {
+        throw new Error(
+          [
+            `Manual date correction safety check failed at row ${rowNumber}.`,
+            `Expected quotation: ${manualDateCorrection.quotationNo}`,
+            `Actual quotation: ${quotationNo ?? "-"}`,
+          ].join("\n"),
+        );
+      }
+
+      quotationDate =
+        manualDateCorrection.quotationDate;
+    }
 
     const boqNo =
       getCellText(

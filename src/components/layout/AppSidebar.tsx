@@ -1,13 +1,18 @@
+"use client";
+
+import Link from "next/link";
+
 import {
-  Building2,
-  FileText,
-  LayoutDashboard,
   CalendarDays,
   CalendarRange,
+  FileText,
+  LayoutDashboard,
   Trash2,
 } from "lucide-react";
 
-import Link from "next/link";
+import {
+  usePathname,
+} from "next/navigation";
 
 const navigation = [
   {
@@ -20,12 +25,6 @@ const navigation = [
     name: "จัดการใบเสนอราคา",
     href: "/quotations",
     icon: FileText,
-  },
-
-  {
-    name: "ลูกค้า",
-    href: "/customers",
-    icon: Building2,
   },
 
   {
@@ -48,33 +47,74 @@ const navigation = [
 ];
 
 export function AppSidebar() {
+  const pathname =
+    usePathname();
+
+  function isActive(
+    href: string,
+  ) {
+    /*
+     * หน้า Customer Detail ถือเป็น
+     * ส่วนหนึ่งของหน้าภาพรวม
+     */
+    if (href === "/") {
+      return (
+        pathname === "/" ||
+        pathname.startsWith(
+          "/customers/",
+        )
+      );
+    }
+
+    return (
+      pathname === href ||
+      pathname.startsWith(
+        `${href}/`,
+      )
+    );
+  }
+
   return (
     <aside
       className="
-        fixed inset-y-0 left-0 z-40
-        hidden w-[260px]
-        border-r border-[#e5e7eb]
+        fixed
+        inset-y-0
+        left-0
+        z-40
+        hidden
+        w-[260px]
+        border-r
+        border-[#e5e7eb]
         bg-white
-        lg:flex lg:flex-col
+        lg:flex
+        lg:flex-col
       "
     >
+      {/* Logo */}
       <div
         className="
-          flex h-[88px]
+          flex
+          h-[88px]
           items-center
-          border-b border-[#e5e7eb]
+          border-b
+          border-[#e5e7eb]
           px-6
         "
       >
         <Link
           href="/"
-          className="flex items-center gap-3"
+          className="
+            flex
+            items-center
+            gap-3
+          "
         >
           <img
             src="/ntp-logo.png"
             alt="NTP Electric and Engineering"
             className="
-              h-14 w-14
+              h-14
+              w-14
               object-contain
             "
           />
@@ -82,7 +122,8 @@ export function AppSidebar() {
           <div>
             <div
               className="
-                text-lg font-bold
+                text-lg
+                font-bold
                 tracking-tight
                 text-[#17379c]
               "
@@ -103,10 +144,18 @@ export function AppSidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 px-3 py-5">
+      {/* Navigation */}
+      <nav
+        className="
+          flex-1
+          px-3
+          py-5
+        "
+      >
         <div
           className="
-            mb-2 px-3
+            mb-2
+            px-3
             text-[11px]
             font-semibold
             uppercase
@@ -123,6 +172,11 @@ export function AppSidebar() {
               const Icon =
                 item.icon;
 
+              const active =
+                isActive(
+                  item.href,
+                );
+
               return (
                 <Link
                   key={
@@ -131,28 +185,70 @@ export function AppSidebar() {
                   href={
                     item.href
                   }
-                  className="
-                    group
-                    flex items-center
+                  className={`
+                    relative
+                    flex
+                    items-center
                     gap-3
                     rounded-lg
-                    px-3 py-2.5
+                    px-3
+                    py-2.5
                     text-sm
-                    font-medium
-                    text-[#475467]
-                    transition
-                    hover:bg-[#eef2ff]
-                    hover:text-[#17379c]
-                  "
+                    transition-all
+                    ${
+                      active
+                        ? `
+                            bg-[#eef2ff]
+                            font-semibold
+                            text-[#17379c]
+                          `
+                        : `
+                            font-medium
+                            text-[#475467]
+                            hover:bg-[#f8f9fc]
+                            hover:text-[#17379c]
+                          `
+                    }
+                  `}
                 >
+                  {active && (
+                    <span
+                      className="
+                        absolute
+                        bottom-2
+                        left-0
+                        top-2
+                        w-[3px]
+                        rounded-r-full
+                        bg-[#17379c]
+                      "
+                    />
+                  )}
+
                   <Icon
                     size={19}
                     strokeWidth={
-                      1.8
+                      active
+                        ? 2.2
+                        : 1.8
                     }
                   />
 
-                  {item.name}
+                  <span>
+                    {item.name}
+                  </span>
+
+                  {active && (
+                    <span
+                      className="
+                        ml-auto
+                        h-1.5
+                        w-1.5
+                        rounded-full
+                        bg-[#df001b]
+                      "
+                    />
+                  )}
                 </Link>
               );
             },
@@ -160,11 +256,13 @@ export function AppSidebar() {
         </div>
       </nav>
 
+      {/* Footer */}
       <div
         className="
           border-t
           border-[#e5e7eb]
-          px-5 py-4
+          px-5
+          py-4
         "
       >
         <p
