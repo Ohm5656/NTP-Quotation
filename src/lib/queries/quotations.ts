@@ -599,6 +599,13 @@ export async function getAvailableQuotationYears(): Promise<
             true,
         },
       )
+      .order(
+        "id",
+        {
+          ascending:
+            true,
+        },
+      )
       .range(
         from,
         from +

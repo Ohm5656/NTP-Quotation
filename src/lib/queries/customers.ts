@@ -30,6 +30,7 @@ async function getAllCustomerSummaryRows(
       .eq("customer_id", customerId)
       .is("deleted_at", null)
       .order("quotation_date", { ascending: true, nullsFirst: false })
+      .order("id", { ascending: true })
       .range(from, from + FETCH_BATCH_SIZE - 1);
 
     if (error) {

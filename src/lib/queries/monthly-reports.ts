@@ -81,6 +81,12 @@ async function getAllActiveReportRows(): Promise<
           ascending: true,
         },
       )
+      .order(
+        "id",
+        {
+          ascending: true,
+        },
+      )
       .range(
         from,
         from +
@@ -135,6 +141,7 @@ async function getActiveReportRowsInRange(
       .gte("quotation_date", start)
       .lt("quotation_date", end)
       .order("quotation_date", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + FETCH_BATCH_SIZE - 1);
 
     if (error) {

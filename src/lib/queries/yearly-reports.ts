@@ -228,6 +228,13 @@ async function getAllYearRows(
             true,
         },
       )
+      .order(
+        "id",
+        {
+          ascending:
+            true,
+        },
+      )
       .range(
         from,
         from +
