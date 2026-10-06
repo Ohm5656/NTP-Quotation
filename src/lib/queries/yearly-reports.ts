@@ -437,6 +437,93 @@ function parseDateSearch(
  * Annual Overview
  * ======================================================= */
 
+async function getYearlyReportOverviewFallback(
+  buddhistYear: number,
+): Promise<YearlyReportOverview> {
+  const rows = await getAllYearRows(buddhistYear);
+  const monthGroups = new Map<number, {
+    quotationCount: number;
+    customers: Set<string>;
+    totalAmount: number;
+  }>();
+  const customerGroups = new Map<string, {
+    customerId: string | null;
+    customerName: string;
+    quotationCount: number;
+    totalAmount: number;
+  }>();
+  const customers = new Set<string>();
+  let totalAmount = 0;
+
+  for (const row of rows) {
+    const amount = Number(row.total_amount ?? 0);
+    totalAmount += amount;
+    if (row.customer_id) {
+      customers.add(row.customer_id);
+    }
+
+    const month = Number(row.quotation_date?.slice(5, 7));
+    if (Number.isFinite(month)) {
+      const group = monthGroups.get(month) ?? {
+        quotationCount: 0,
+        customers: new Set<string>(),
+        totalAmount: 0,
+      };
+      group.quotationCount += 1;
+      group.totalAmount += amount;
+      if (row.customer_id) {
+        group.customers.add(row.customer_id);
+      }
+      monthGroups.set(month, group);
+    }
+
+    const customerName = row.customer_name_raw?.trim() || "ไม่ระบุลูกค้า";
+    const key = row.customer_id ?? `unassigned:${customerName}`;
+    const group = customerGroups.get(key) ?? {
+      customerId: row.customer_id,
+      customerName,
+      quotationCount: 0,
+      totalAmount: 0,
+    };
+    group.quotationCount += 1;
+    group.totalAmount += amount;
+    customerGroups.set(key, group);
+  }
+
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const group = monthGroups.get(month);
+    return {
+      month,
+      quotationCount: group?.quotationCount ?? 0,
+      customerCount: group?.customers.size ?? 0,
+      totalAmount: group?.totalAmount ?? 0,
+    };
+  });
+
+  const customerRows = [...customerGroups.values()];
+
+  return {
+    summary: {
+      quotationCount: rows.length,
+      customerCount: customers.size,
+      totalAmount,
+      averageAmount: rows.length > 0 ? totalAmount / rows.length : 0,
+    },
+    months,
+    topCustomers: [...customerRows]
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 10),
+    customers: customerRows
+      .filter((customer) => Boolean(customer.customerId))
+      .map((customer) => ({
+        id: customer.customerId!,
+        name: customer.customerName,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, "th")),
+  };
+}
+
 export async function getYearlyReportOverview(
   buddhistYear: number,
 ): Promise<
@@ -476,6 +563,10 @@ export async function getYearlyReportOverview(
     customersResult.error;
 
   if (error) {
+    if (error.code === "PGRST205") {
+      return getYearlyReportOverviewFallback(buddhistYear);
+    }
+
     throw new Error(
       `ไม่สามารถโหลดรายงานรายปีได้: ${error.message}`,
     );

@@ -27,6 +27,14 @@ type ReportSummaryRow = {
     | null;
 };
 
+function isMissingSummaryView(
+  error: {
+    code?: string;
+  } | null,
+) {
+  return error?.code === "PGRST205";
+}
+
 /**
  * โหลดข้อมูลทั้งหมดแบบแบ่งรอบ
  *
@@ -412,6 +420,10 @@ export async function getMonthlyReportYears(): Promise<
     .select("gregorian_year, quotation_count, customer_count, total_amount");
 
   if (error) {
+    if (isMissingSummaryView(error)) {
+      return getMonthlyReportYearsFallback();
+    }
+
     throw new Error(`ไม่สามารถโหลดรายงานรายปีได้: ${error.message}`);
   }
 
@@ -420,6 +432,10 @@ export async function getMonthlyReportYears(): Promise<
     .select("gregorian_year, month");
 
   if (months.error) {
+    if (isMissingSummaryView(months.error)) {
+      return getMonthlyReportYearsFallback();
+    }
+
     throw new Error(`ไม่สามารถโหลดรายงานรายปีได้: ${months.error.message}`);
   }
 
@@ -440,6 +456,145 @@ export async function getMonthlyReportYears(): Promise<
     .sort((a, b) => b.buddhistYear - a.buddhistYear);
 }
 
+async function getMonthlyReportYearsFallback(): Promise<
+  MonthlyYearSummary[]
+> {
+  const groups = new Map<number, {
+    months: Set<number>;
+    customers: Set<string>;
+    quotationCount: number;
+    totalAmount: number;
+  }>();
+
+  for (const row of await getAllActiveReportRows()) {
+    if (!row.quotation_date) {
+      continue;
+    }
+
+    const gregorianYear = Number(row.quotation_date.slice(0, 4));
+    const month = Number(row.quotation_date.slice(5, 7));
+    if (!Number.isFinite(gregorianYear) || !Number.isFinite(month)) {
+      continue;
+    }
+
+    const group = groups.get(gregorianYear) ?? {
+      months: new Set<number>(),
+      customers: new Set<string>(),
+      quotationCount: 0,
+      totalAmount: 0,
+    };
+
+    group.months.add(month);
+    if (row.customer_id) {
+      group.customers.add(row.customer_id);
+    }
+    group.quotationCount += 1;
+    group.totalAmount += Number(row.total_amount ?? 0);
+    groups.set(gregorianYear, group);
+  }
+
+  return [...groups.entries()]
+    .map(([gregorianYear, group]) => ({
+      buddhistYear: gregorianYear + 543,
+      monthCount: group.months.size,
+      quotationCount: group.quotationCount,
+      customerCount: group.customers.size,
+      totalAmount: group.totalAmount,
+    }))
+    .sort((a, b) => b.buddhistYear - a.buddhistYear);
+}
+
+async function getMonthlyReportMonthsFallback(
+  buddhistYear: number,
+): Promise<MonthlyMonthSummary[]> {
+  const range = getYearRange(buddhistYear);
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotations")
+    .select("quotation_date, customer_id, total_amount")
+    .is("deleted_at", null)
+    .gte("quotation_date", range.start)
+    .lt("quotation_date", range.end)
+    .range(0, 9_999);
+
+  if (error) {
+    throw new Error(`ไม่สามารถโหลดรายงานรายเดือนได้: ${error.message}`);
+  }
+
+  const groups = new Map<number, {
+    quotationCount: number;
+    customers: Set<string>;
+    totalAmount: number;
+  }>();
+
+  for (const row of data ?? []) {
+    const rowMonth = Number(row.quotation_date?.slice(5, 7));
+    if (!Number.isFinite(rowMonth)) {
+      continue;
+    }
+
+    const group = groups.get(rowMonth) ?? {
+      quotationCount: 0,
+      customers: new Set<string>(),
+      totalAmount: 0,
+    };
+    group.quotationCount += 1;
+    group.totalAmount += Number(row.total_amount ?? 0);
+    if (row.customer_id) {
+      group.customers.add(row.customer_id);
+    }
+    groups.set(rowMonth, group);
+  }
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const group = groups.get(month);
+    const quotationCount = group?.quotationCount ?? 0;
+    return {
+      month,
+      quotationCount,
+      customerCount: group?.customers.size ?? 0,
+      totalAmount: group?.totalAmount ?? 0,
+      hasData: quotationCount > 0,
+    };
+  });
+}
+
+async function getMonthlyDetailSummaryFallback(
+  buddhistYear: number,
+  month: number,
+): Promise<MonthlyDetailSummary> {
+  const range = getMonthRange(buddhistYear, month);
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotations")
+    .select("customer_id, total_amount")
+    .is("deleted_at", null)
+    .gte("quotation_date", range.start)
+    .lt("quotation_date", range.end)
+    .range(0, 9_999);
+
+  if (error) {
+    throw new Error(`ไม่สามารถโหลดสรุปรายเดือนได้: ${error.message}`);
+  }
+
+  const rows = data ?? [];
+  const totalAmount = rows.reduce(
+    (total, row) => total + Number(row.total_amount ?? 0),
+    0,
+  );
+  const customerCount = new Set(
+    rows.flatMap((row) => row.customer_id ? [row.customer_id] : []),
+  ).size;
+
+  return {
+    quotationCount: rows.length,
+    customerCount,
+    totalAmount,
+    averageAmount: rows.length > 0 ? totalAmount / rows.length : 0,
+  };
+}
+
 /* =========================================================
  * Month Folder Page
  * ======================================================= */
@@ -458,6 +613,10 @@ export async function getMonthlyReportMonths(
     .eq("gregorian_year", buddhistYear - 543);
 
   if (error) {
+    if (isMissingSummaryView(error)) {
+      return getMonthlyReportMonthsFallback(buddhistYear);
+    }
+
     throw new Error(
       `ไม่สามารถโหลดข้อมูลปี ${buddhistYear} ได้: ${error.message}`,
     );
@@ -501,6 +660,10 @@ export async function getMonthlyDetailSummary(
     .maybeSingle();
 
   if (error) {
+    if (isMissingSummaryView(error)) {
+      return getMonthlyDetailSummaryFallback(buddhistYear, month);
+    }
+
     throw new Error(
       `ไม่สามารถโหลดข้อมูลสรุปรายเดือนได้: ${error.message}`,
     );
