@@ -1,11 +1,11 @@
 import {
+  AlertTriangle,
   Building2,
-  FileText,
-  Wallet,
 } from "lucide-react";
 
 import {
   getCustomerSummaries,
+  getDashboardTotals,
 } from "@/lib/queries/dashboard";
 
 import {
@@ -21,38 +21,22 @@ import {
 } from "@/components/dashboard/SummaryCard";
 
 export default async function DashboardPage() {
-  const customers =
-    await getCustomerSummaries();
+  const [
+    customers,
+    totals,
+  ] = await Promise.all([
+    getCustomerSummaries(),
+    getDashboardTotals(),
+  ]);
 
   const totalCustomers =
     customers.length;
 
-  const totalQuotations =
-    customers.reduce(
-      (
-        sum,
-        customer,
-      ) =>
-        sum +
-        customer.quotation_count,
-      0,
-    );
-
-  const totalQuotedAmount =
-    customers.reduce(
-      (
-        sum,
-        customer,
-      ) =>
-        sum +
-        Number(
-          customer.total_quoted_amount,
-        ),
-      0,
-    );
-
   return (
     <div className="mx-auto max-w-[1600px]">
+      {/* =====================================================
+       * Page Header
+       * =================================================== */}
       <div
         className="
           mb-7
@@ -109,9 +93,21 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* =====================================================
+       * Summary
+       *
+       * สำคัญ:
+       * จำนวนใบเสนอราคาและยอดรวม
+       * อ่านจาก quotations โดยตรง
+       * ไม่ได้ SUM จาก Customer Card
+       *
+       * เพื่อให้รายการที่ Customer ว่าง
+       * ยังถูกนับในยอดรวมด้วย
+       * =================================================== */}
       <div
         className="
-          grid gap-4
+          grid
+          gap-4
           md:grid-cols-3
         "
       >
@@ -128,7 +124,7 @@ export default async function DashboardPage() {
         <SummaryCard
           label="ใบเสนอราคาทั้งหมด"
           value={
-            totalQuotations.toLocaleString(
+            totals.quotation_count.toLocaleString(
               "th-TH",
             )
           }
@@ -139,18 +135,100 @@ export default async function DashboardPage() {
           label="มูลค่าที่เสนอทั้งหมด"
           value={
             formatBaht(
-              totalQuotedAmount,
+              totals.total_quoted_amount,
             )
           }
           subtext="ยอดรวมใบเสนอราคาทั้งหมด"
         />
       </div>
 
+      {/* =====================================================
+       * Missing Customer Warning
+       * =================================================== */}
+      {totals.unassigned_customer_count >
+        0 && (
+        <div
+          className="
+            mt-4
+            flex
+            items-start
+            gap-3
+            rounded-xl
+            border
+            border-[#f1d5d8]
+            bg-[#fff8f8]
+            px-4
+            py-3.5
+          "
+        >
+          <AlertTriangle
+            size={19}
+            className="
+              mt-0.5
+              shrink-0
+              text-[#df001b]
+            "
+          />
+
+          <div>
+            <p
+              className="
+                text-sm
+                font-semibold
+                text-[#172033]
+              "
+            >
+              พบใบเสนอราคาที่ไม่ได้ระบุลูกค้า
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                leading-6
+                text-[#667085]
+              "
+            >
+              มี{" "}
+              <strong
+                className="
+                  font-semibold
+                  text-[#172033]
+                "
+              >
+                {totals.unassigned_customer_count.toLocaleString(
+                  "th-TH",
+                )}{" "}
+                รายการ
+              </strong>{" "}
+              ที่ไม่ได้ระบุชื่อลูกค้า
+              มูลค่ารวม{" "}
+              <strong
+                className="
+                  font-semibold
+                  text-[#17379c]
+                "
+              >
+                {formatBaht(
+                  totals.unassigned_customer_amount,
+                )}
+              </strong>
+              {" "}
+              โดยยอดดังกล่าวถูกรวมอยู่ในยอดรวมด้านบนแล้ว
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+       * Customers
+       * =================================================== */}
       <section className="mt-8">
         <div
           className="
             mb-4
-            flex items-end
+            flex
+            items-end
             justify-between
             gap-4
           "
@@ -183,7 +261,10 @@ export default async function DashboardPage() {
               text-[#667085]
             "
           >
-            {customers.length} รายการ
+            {customers.length.toLocaleString(
+              "th-TH",
+            )}{" "}
+            รายการ
           </span>
         </div>
 
@@ -202,7 +283,8 @@ export default async function DashboardPage() {
           >
             <Building2
               className="
-                mx-auto mb-3
+                mx-auto
+                mb-3
                 text-[#98a2b3]
               "
               size={30}
@@ -220,16 +302,15 @@ export default async function DashboardPage() {
         ) : (
           <div
             className="
-              grid gap-4
+              grid
+              gap-4
               md:grid-cols-2
               xl:grid-cols-3
               2xl:grid-cols-4
             "
           >
             {customers.map(
-              (
-                customer,
-              ) => (
+              (customer) => (
                 <CustomerCard
                   key={
                     customer.customer_id
