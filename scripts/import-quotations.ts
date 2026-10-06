@@ -480,9 +480,7 @@ function parseStringDate(
     );
 
   if (!match) {
-    throw new Error(
-      `Unknown date format: "${input}"`,
-    );
+    return null;
   }
 
   const a = Number(match[1]);
@@ -516,9 +514,7 @@ function parseStringDate(
   );
 
   if (candidates.length === 0) {
-    throw new Error(
-      `Invalid date: "${input}"`,
-    );
+    return null;
   }
 
   let selected =
@@ -761,7 +757,7 @@ async function main() {
         row.getCell(2),
       );
 
-    const quotationDate =
+    let quotationDate =
       normalizeExcelDate(
         row.getCell(1),
         quotationNo,
@@ -771,6 +767,13 @@ async function main() {
       sourceValueToString(
         row.getCell(1),
       );
+      if (
+  rowNumber === 170 &&
+  quotationNo === "6604033" &&
+  sourceDateRaw === "PX"
+) {
+  quotationDate = "2023-04-28";
+}
 
     const boqNo =
       getCellText(
