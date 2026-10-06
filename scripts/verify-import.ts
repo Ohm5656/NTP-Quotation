@@ -148,7 +148,9 @@ async function main() {
       break;
     }
 
-    allRows.push(...data);
+    allRows.push(
+      ...(data as unknown as typeof allRows),
+    );
 
     if (
       data.length <

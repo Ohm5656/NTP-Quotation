@@ -179,6 +179,7 @@ export function CreateQuotationModal({
             aria-modal="true"
             aria-labelledby="create-quotation-title"
             className="
+              dialog-enter
               relative
               flex
               max-h-[92vh]

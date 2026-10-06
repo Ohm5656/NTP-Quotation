@@ -406,145 +406,38 @@ function getMonthRange(
 export async function getMonthlyReportYears(): Promise<
   MonthlyYearSummary[]
 > {
-  const data =
-    await getAllActiveReportRows();
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotation_yearly_summary")
+    .select("gregorian_year, quotation_count, customer_count, total_amount");
 
-  const groups =
-    new Map<
-      number,
-      {
-        months:
-          Set<number>;
-
-        customers:
-          Set<string>;
-
-        quotationCount:
-          number;
-
-        totalAmount:
-          number;
-      }
-    >();
-
-  for (
-    const row of data
-  ) {
-    if (
-      !row.quotation_date
-    ) {
-      continue;
-    }
-
-    const gregorianYear =
-      Number(
-        row.quotation_date.slice(
-          0,
-          4,
-        ),
-      );
-
-    const month =
-      Number(
-        row.quotation_date.slice(
-          5,
-          7,
-        ),
-      );
-
-    if (
-      !Number.isFinite(
-        gregorianYear,
-      ) ||
-      !Number.isFinite(
-        month,
-      )
-    ) {
-      continue;
-    }
-
-    const buddhistYear =
-      gregorianYear +
-      543;
-
-    if (
-      !groups.has(
-        buddhistYear,
-      )
-    ) {
-      groups.set(
-        buddhistYear,
-        {
-          months:
-            new Set<number>(),
-
-          customers:
-            new Set<string>(),
-
-          quotationCount:
-            0,
-
-          totalAmount:
-            0,
-        },
-      );
-    }
-
-    const group =
-      groups.get(
-        buddhistYear,
-      )!;
-
-    group.months.add(
-      month,
-    );
-
-    if (
-      row.customer_id
-    ) {
-      group.customers.add(
-        row.customer_id,
-      );
-    }
-
-    group.quotationCount +=
-      1;
-
-    group.totalAmount +=
-      Number(
-        row.total_amount ??
-          0,
-      );
+  if (error) {
+    throw new Error(`ไม่สามารถโหลดรายงานรายปีได้: ${error.message}`);
   }
 
-  return [
-    ...groups.entries(),
-  ]
-    .map(
-      ([
-        buddhistYear,
-        value,
-      ]) => ({
-        buddhistYear,
+  const months = await supabase
+    .from("quotation_monthly_summary")
+    .select("gregorian_year, month");
 
-        monthCount:
-          value.months.size,
+  if (months.error) {
+    throw new Error(`ไม่สามารถโหลดรายงานรายปีได้: ${months.error.message}`);
+  }
 
-        quotationCount:
-          value.quotationCount,
+  const monthCountByYear = new Map<number, number>();
+  for (const row of months.data ?? []) {
+    const year = Number(row.gregorian_year);
+    monthCountByYear.set(year, (monthCountByYear.get(year) ?? 0) + 1);
+  }
 
-        customerCount:
-          value.customers.size,
-
-        totalAmount:
-          value.totalAmount,
-      }),
-    )
-    .sort(
-      (a, b) =>
-        b.buddhistYear -
-        a.buddhistYear,
-    );
+  return (data ?? [])
+    .map((row) => ({
+      buddhistYear: Number(row.gregorian_year) + 543,
+      monthCount: monthCountByYear.get(Number(row.gregorian_year)) ?? 0,
+      quotationCount: Number(row.quotation_count ?? 0),
+      customerCount: Number(row.customer_count ?? 0),
+      totalAmount: Number(row.total_amount ?? 0),
+    }))
+    .sort((a, b) => b.buddhistYear - a.buddhistYear);
 }
 
 /* =========================================================
@@ -559,41 +452,10 @@ export async function getMonthlyReportMonths(
   const supabase =
     createAdminSupabaseClient();
 
-  const range =
-    getYearRange(
-      buddhistYear,
-    );
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      `
-        quotation_date,
-        customer_id,
-        total_amount
-      `,
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .gte(
-      "quotation_date",
-      range.start,
-    )
-    .lt(
-      "quotation_date",
-      range.end,
-    )
-    .range(
-      0,
-      9999,
-    );
+  const { data, error } = await supabase
+    .from("quotation_monthly_summary")
+    .select("month, quotation_count, customer_count, total_amount")
+    .eq("gregorian_year", buddhistYear - 543);
 
   if (error) {
     throw new Error(
@@ -601,105 +463,21 @@ export async function getMonthlyReportMonths(
     );
   }
 
-  const monthMap =
-    new Map<
-      number,
-      {
-        count: number;
+  const byMonth = new Map((data ?? []).map((row) => [Number(row.month), row]));
 
-        customers:
-          Set<string>;
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const row = byMonth.get(month);
+    const quotationCount = Number(row?.quotation_count ?? 0);
 
-        total:
-          number;
-      }
-    >();
-
-  for (
-    let month = 1;
-    month <= 12;
-    month++
-  ) {
-    monthMap.set(
+    return {
       month,
-      {
-        count: 0,
-
-        customers:
-          new Set(),
-
-        total:
-          0,
-      },
-    );
-  }
-
-  for (
-    const row of
-      data ?? []
-  ) {
-    if (
-      !row.quotation_date
-    ) {
-      continue;
-    }
-
-    const month =
-      Number(
-        row.quotation_date.slice(
-          5,
-          7,
-        ),
-      );
-
-    const group =
-      monthMap.get(
-        month,
-      );
-
-    if (!group) {
-      continue;
-    }
-
-    group.count += 1;
-
-    group.total +=
-      Number(
-        row.total_amount ??
-          0,
-      );
-
-    if (
-      row.customer_id
-    ) {
-      group.customers.add(
-        row.customer_id,
-      );
-    }
-  }
-
-  return [
-    ...monthMap.entries(),
-  ].map(
-    ([
-      month,
-      value,
-    ]) => ({
-      month,
-
-      quotationCount:
-        value.count,
-
-      customerCount:
-        value.customers.size,
-
-      totalAmount:
-        value.total,
-
-      hasData:
-        value.count > 0,
-    }),
-  );
+      quotationCount,
+      customerCount: Number(row?.customer_count ?? 0),
+      totalAmount: Number(row?.total_amount ?? 0),
+      hasData: quotationCount > 0,
+    };
+  });
 }
 
 /* =========================================================
@@ -715,41 +493,12 @@ export async function getMonthlyDetailSummary(
   const supabase =
     createAdminSupabaseClient();
 
-  const range =
-    getMonthRange(
-      buddhistYear,
-      month,
-    );
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      `
-        customer_id,
-        total_amount
-      `,
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .gte(
-      "quotation_date",
-      range.start,
-    )
-    .lt(
-      "quotation_date",
-      range.end,
-    )
-    .range(
-      0,
-      9999,
-    );
+  const { data, error } = await supabase
+    .from("quotation_monthly_summary")
+    .select("quotation_count, customer_count, total_amount")
+    .eq("gregorian_year", buddhistYear - 543)
+    .eq("month", month)
+    .maybeSingle();
 
   if (error) {
     throw new Error(
@@ -757,47 +506,14 @@ export async function getMonthlyDetailSummary(
     );
   }
 
-  const rows =
-    data ?? [];
-
-  const customers =
-    new Set<string>();
-
-  let totalAmount =
-    0;
-
-  for (
-    const row of rows
-  ) {
-    totalAmount +=
-      Number(
-        row.total_amount ??
-          0,
-      );
-
-    if (
-      row.customer_id
-    ) {
-      customers.add(
-        row.customer_id,
-      );
-    }
-  }
+  const quotationCount = Number(data?.quotation_count ?? 0);
+  const totalAmount = Number(data?.total_amount ?? 0);
 
   return {
-    quotationCount:
-      rows.length,
-
-    customerCount:
-      customers.size,
-
+    quotationCount,
+    customerCount: Number(data?.customer_count ?? 0),
     totalAmount,
-
-    averageAmount:
-      rows.length > 0
-        ? totalAmount /
-          rows.length
-        : 0,
+    averageAmount: quotationCount > 0 ? totalAmount / quotationCount : 0,
   };
 }
 

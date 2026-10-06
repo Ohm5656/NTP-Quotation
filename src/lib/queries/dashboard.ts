@@ -37,7 +37,8 @@ export async function getCustomerSummaries(): Promise<
       {
         ascending: false,
       },
-    );
+    )
+    .limit(48);
 
   if (error) {
     throw new Error(
@@ -128,4 +129,23 @@ export async function getDashboardTotals(): Promise<
           0,
       ),
   };
+}
+
+export async function getCustomerSummaryCount(): Promise<number> {
+  const supabase = createAdminSupabaseClient();
+
+  const { count, error } = await supabase
+    .from("customers")
+    .select("id", {
+      count: "exact",
+      head: true,
+    });
+
+  if (error) {
+    throw new Error(
+      `ไม่สามารถนับจำนวนลูกค้าได้: ${error.message}`,
+    );
+  }
+
+  return count ?? 0;
 }

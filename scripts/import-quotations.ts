@@ -795,8 +795,15 @@ async function main() {
         rowNumber,
       );
 
+    const values =
+      Array.isArray(
+        row.values,
+      )
+        ? row.values
+        : [];
+
     const rowHasData =
-      row.values
+      values
         .slice(1)
         .some(
           (value) =>

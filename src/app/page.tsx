@@ -5,6 +5,7 @@ import {
 
 import {
   getCustomerSummaries,
+  getCustomerSummaryCount,
   getDashboardTotals,
 } from "@/lib/queries/dashboard";
 
@@ -23,14 +24,13 @@ import {
 export default async function DashboardPage() {
   const [
     customers,
+    totalCustomers,
     totals,
   ] = await Promise.all([
     getCustomerSummaries(),
+    getCustomerSummaryCount(),
     getDashboardTotals(),
   ]);
-
-  const totalCustomers =
-    customers.length;
 
   return (
     <div className="mx-auto max-w-[1600px]">
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
               text-[#667085]
             "
           >
-            {customers.length.toLocaleString(
+            {totalCustomers.toLocaleString(
               "th-TH",
             )}{" "}
             รายการ
@@ -226,9 +226,10 @@ export default async function DashboardPage() {
               ยังไม่มีข้อมูลลูกค้า
             </p>
           </div>
-        ) : (
+          ) : (
           <div
             className="
+              content-auto
               grid
               gap-4
               md:grid-cols-2
@@ -249,6 +250,12 @@ export default async function DashboardPage() {
               ),
             )}
           </div>
+        )}
+
+        {totalCustomers > customers.length && (
+          <p className="mt-5 text-center text-sm text-[#667085]">
+            แสดงลูกค้าที่มีมูลค่าใบเสนอราคาสูงสุด {customers.length.toLocaleString("th-TH")} จาก {totalCustomers.toLocaleString("th-TH")} ราย
+          </p>
         )}
       </section>
     </div>

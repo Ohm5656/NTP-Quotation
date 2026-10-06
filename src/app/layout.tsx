@@ -12,6 +12,10 @@ import {
   AppHeader,
 } from "@/components/layout/AppHeader";
 
+// Quotation data is live and is read with the server-side Supabase client.
+// Rendering dynamically prevents build-time database fetches and stale reports.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default:

@@ -442,6 +442,141 @@ export async function getYearlyReportOverview(
 ): Promise<
   YearlyReportOverview
 > {
+  const supabase =
+    createAdminSupabaseClient();
+
+  const gregorianYear =
+    buddhistYear - 543;
+
+  const [
+    summaryResult,
+    monthsResult,
+    customersResult,
+  ] = await Promise.all([
+    supabase
+      .from("quotation_yearly_summary")
+      .select("quotation_count, customer_count, total_amount")
+      .eq("gregorian_year", gregorianYear)
+      .maybeSingle(),
+
+    supabase
+      .from("quotation_monthly_summary")
+      .select("month, quotation_count, customer_count, total_amount")
+      .eq("gregorian_year", gregorianYear),
+
+    supabase
+      .from("quotation_yearly_customer_summary")
+      .select("customer_id, customer_name, quotation_count, total_amount")
+      .eq("gregorian_year", gregorianYear),
+  ]);
+
+  const error =
+    summaryResult.error ??
+    monthsResult.error ??
+    customersResult.error;
+
+  if (error) {
+    throw new Error(
+      `ไม่สามารถโหลดรายงานรายปีได้: ${error.message}`,
+    );
+  }
+
+  const monthRows =
+    new Map(
+      (monthsResult.data ?? []).map(
+        (row) => [
+          Number(row.month),
+          row,
+        ],
+      ),
+    );
+
+  const months =
+    Array.from(
+      { length: 12 },
+      (_, index) => {
+        const month = index + 1;
+        const row = monthRows.get(month);
+
+        return {
+          month,
+          quotationCount: Number(row?.quotation_count ?? 0),
+          customerCount: Number(row?.customer_count ?? 0),
+          totalAmount: Number(row?.total_amount ?? 0),
+        };
+      },
+    );
+
+  const customerRows =
+    (customersResult.data ?? []).map(
+      (row) => ({
+        customerId: row.customer_id,
+        customerName: row.customer_name,
+        quotationCount: Number(row.quotation_count ?? 0),
+        totalAmount: Number(row.total_amount ?? 0),
+      }),
+    );
+
+  const topCustomers =
+    [...customerRows]
+      .sort(
+        (a, b) =>
+          b.totalAmount -
+          a.totalAmount,
+      )
+      .slice(0, 10);
+
+  const customerOptions =
+    customerRows
+      .filter(
+        (customer) =>
+          Boolean(customer.customerId),
+      )
+      .map(
+        (customer) => ({
+          id: customer.customerId!,
+          name: customer.customerName,
+        }),
+      )
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(
+            b.name,
+            "th",
+          ),
+      );
+
+  const quotationCount =
+    Number(
+      summaryResult.data?.quotation_count ??
+        0,
+    );
+
+  const totalAmount =
+    Number(
+      summaryResult.data?.total_amount ??
+        0,
+    );
+
+  return {
+    summary: {
+      quotationCount,
+      customerCount: Number(
+        summaryResult.data?.customer_count ??
+          0,
+      ),
+      totalAmount,
+      averageAmount:
+        quotationCount > 0
+          ? totalAmount / quotationCount
+          : 0,
+    },
+    months,
+    topCustomers,
+    customers: customerOptions,
+  };
+
+  {
   const rows =
     await getAllYearRows(
       buddhistYear,
@@ -522,7 +657,7 @@ export async function getYearlyReportOverview(
       row.customer_id
     ) {
       customers.add(
-        row.customer_id,
+        row.customer_id!,
       );
     }
 
@@ -534,7 +669,7 @@ export async function getYearlyReportOverview(
     ) {
       const month =
         Number(
-          row.quotation_date.slice(
+          row.quotation_date!.slice(
             5,
             7,
           ),
@@ -546,19 +681,19 @@ export async function getYearlyReportOverview(
         );
 
       if (monthGroup) {
-        monthGroup
+        monthGroup!
           .quotationCount +=
           1;
 
-        monthGroup
+        monthGroup!
           .totalAmount +=
           amount;
 
         if (
           row.customer_id
         ) {
-          monthGroup.customers.add(
-            row.customer_id,
+          monthGroup!.customers.add(
+            row.customer_id!,
           );
         }
       }
@@ -718,6 +853,7 @@ export async function getYearlyReportOverview(
     customers:
       customerOptions,
   };
+  }
 }
 
 /* =========================================================

@@ -146,6 +146,7 @@ export function DeleteQuotationButton({
         >
           <div
             className="
+              dialog-enter
               w-full
               max-w-[430px]
               overflow-hidden
