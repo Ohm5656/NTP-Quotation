@@ -119,6 +119,36 @@ async function getAllActiveReportRows(): Promise<
 
   return rows;
 }
+
+async function getActiveReportRowsInRange(
+  start: string,
+  end: string,
+): Promise<ReportSummaryRow[]> {
+  const supabase = createAdminSupabaseClient();
+  const rows: ReportSummaryRow[] = [];
+
+  for (let from = 0; ; from += FETCH_BATCH_SIZE) {
+    const { data, error } = await supabase
+      .from("quotations")
+      .select("quotation_date, customer_id, total_amount")
+      .is("deleted_at", null)
+      .gte("quotation_date", start)
+      .lt("quotation_date", end)
+      .order("quotation_date", { ascending: true })
+      .range(from, from + FETCH_BATCH_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Unable to load report rows: ${error.message}`);
+    }
+
+    const batch = (data ?? []) as ReportSummaryRow[];
+    rows.push(...batch);
+
+    if (batch.length < FETCH_BATCH_SIZE) {
+      return rows;
+    }
+  }
+}
 /* =========================================================
  * Types
  * ======================================================= */
@@ -508,18 +538,10 @@ async function getMonthlyReportMonthsFallback(
   buddhistYear: number,
 ): Promise<MonthlyMonthSummary[]> {
   const range = getYearRange(buddhistYear);
-  const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
-    .from("quotations")
-    .select("quotation_date, customer_id, total_amount")
-    .is("deleted_at", null)
-    .gte("quotation_date", range.start)
-    .lt("quotation_date", range.end)
-    .range(0, 9_999);
-
-  if (error) {
-    throw new Error(`ไม่สามารถโหลดรายงานรายเดือนได้: ${error.message}`);
-  }
+  const data = await getActiveReportRowsInRange(
+    range.start,
+    range.end,
+  );
 
   const groups = new Map<number, {
     quotationCount: number;
@@ -565,18 +587,10 @@ async function getMonthlyDetailSummaryFallback(
   month: number,
 ): Promise<MonthlyDetailSummary> {
   const range = getMonthRange(buddhistYear, month);
-  const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
-    .from("quotations")
-    .select("customer_id, total_amount")
-    .is("deleted_at", null)
-    .gte("quotation_date", range.start)
-    .lt("quotation_date", range.end)
-    .range(0, 9_999);
-
-  if (error) {
-    throw new Error(`ไม่สามารถโหลดสรุปรายเดือนได้: ${error.message}`);
-  }
+  const data = await getActiveReportRowsInRange(
+    range.start,
+    range.end,
+  );
 
   const rows = data ?? [];
   const totalAmount = rows.reduce(
@@ -699,47 +713,6 @@ export async function getMonthlyCustomerOptions(
       month,
     );
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      `
-        customer_id,
-        customer_name_raw
-      `,
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .gte(
-      "quotation_date",
-      range.start,
-    )
-    .lt(
-      "quotation_date",
-      range.end,
-    )
-    .not(
-      "customer_id",
-      "is",
-      null,
-    )
-    .range(
-      0,
-      9999,
-    );
-
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดรายชื่อลูกค้าได้: ${error.message}`,
-    );
-  }
-
   const map =
     new Map<
       string,
@@ -747,17 +720,82 @@ export async function getMonthlyCustomerOptions(
     >();
 
   for (
-    const row of
-      data ?? []
+    let from = 0;
+    ;
+    from += FETCH_BATCH_SIZE
   ) {
-    if (
-      row.customer_id &&
-      row.customer_name_raw
-    ) {
-      map.set(
-        row.customer_id,
-        row.customer_name_raw,
+    const {
+      data,
+      error,
+    } = await supabase
+      .from(
+        "quotations",
+      )
+      .select(
+        `
+          customer_id,
+          customer_name_raw
+        `,
+      )
+      .is(
+        "deleted_at",
+        null,
+      )
+      .gte(
+        "quotation_date",
+        range.start,
+      )
+      .lt(
+        "quotation_date",
+        range.end,
+      )
+      .not(
+        "customer_id",
+        "is",
+        null,
+      )
+      .order(
+        "id",
+        {
+          ascending:
+            true,
+        },
+      )
+      .range(
+        from,
+        from +
+          FETCH_BATCH_SIZE -
+          1,
       );
+
+    if (error) {
+      throw new Error(
+        `ไม่สามารถโหลดรายชื่อลูกค้าได้: ${error.message}`,
+      );
+    }
+
+    const batch =
+      data ?? [];
+
+    for (
+      const row of batch
+    ) {
+      if (
+        row.customer_id &&
+        row.customer_name_raw
+      ) {
+        map.set(
+          row.customer_id,
+          row.customer_name_raw,
+        );
+      }
+    }
+
+    if (
+      batch.length <
+      FETCH_BATCH_SIZE
+    ) {
+      break;
     }
   }
 

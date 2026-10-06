@@ -1242,18 +1242,40 @@ async function main() {
     }
   }
 
-  const {
-    data: customerRows,
-    error: customerError,
-  } = await supabase
-    .from("customers")
-    .select("id, name")
-    .range(0, 9999);
+  const customerRows: {
+    id: string;
+    name: string;
+  }[] = [];
 
-  if (customerError) {
-    throw new Error(
-      customerError.message,
+  for (
+    let from = 0;
+    ;
+    from += 1000
+  ) {
+    const {
+      data,
+      error: customerError,
+    } = await supabase
+      .from("customers")
+      .select("id, name")
+      .order("name", {
+        ascending: true,
+      })
+      .range(from, from + 999);
+
+    if (customerError) {
+      throw new Error(
+        customerError.message,
+      );
+    }
+
+    customerRows.push(
+      ...(data ?? []),
     );
+
+    if ((data ?? []).length < 1000) {
+      break;
+    }
   }
 
   const customerIdByName =

@@ -11,6 +11,8 @@ import type {
 
 const PAGE_SIZE = 25;
 
+const FETCH_BATCH_SIZE = 1000;
+
 export type QuotationFilters = {
   search?: string;
 
@@ -462,31 +464,59 @@ export async function getCustomerOptions(): Promise<
   const supabase =
     createAdminSupabaseClient();
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "customers",
-    )
-    .select(
-      "id, name",
-    )
-    .order(
-      "name",
-      {
-        ascending:
-          true,
-      },
+  const customers:
+    CustomerOption[] = [];
+
+  for (
+    let from = 0;
+    ;
+    from += FETCH_BATCH_SIZE
+  ) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from(
+        "customers",
+      )
+      .select(
+        "id, name",
+      )
+      .order(
+        "name",
+        {
+          ascending:
+            true,
+        },
+      )
+      .range(
+        from,
+        from +
+          FETCH_BATCH_SIZE -
+          1,
+      );
+
+    if (error) {
+      throw new Error(
+        `ไม่สามารถโหลดรายชื่อลูกค้าได้: ${error.message}`,
+      );
+    }
+
+    const batch =
+      (data ??
+        []) as CustomerOption[];
+
+    customers.push(
+      ...batch,
     );
 
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดรายชื่อลูกค้าได้: ${error.message}`,
-    );
+    if (
+      batch.length <
+      FETCH_BATCH_SIZE
+    ) {
+      return customers;
+    }
   }
-
-  return data ?? [];
 }
 
 /* =========================================================
@@ -535,73 +565,95 @@ export async function getAvailableQuotationYears(): Promise<
     );
   }
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      "quotation_date",
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .not(
-      "quotation_date",
-      "is",
-      null,
-    )
-    .range(
-      0,
-      4999,
-    );
-
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดปีได้: ${error.message}`,
-    );
-  }
-
   const years =
     new Set<number>();
 
   for (
-    const row of
-      data ?? []
+    let from = 0;
+    ;
+    from += FETCH_BATCH_SIZE
   ) {
-    if (
-      !row.quotation_date
-    ) {
-      continue;
-    }
-
-    const gregorianYear =
-      Number(
-        row.quotation_date.slice(
-          0,
-          4,
-        ),
+    const {
+      data,
+      error,
+    } = await supabase
+      .from(
+        "quotations",
+      )
+      .select(
+        "quotation_date",
+      )
+      .is(
+        "deleted_at",
+        null,
+      )
+      .not(
+        "quotation_date",
+        "is",
+        null,
+      )
+      .order(
+        "quotation_date",
+        {
+          ascending:
+            true,
+        },
+      )
+      .range(
+        from,
+        from +
+          FETCH_BATCH_SIZE -
+          1,
       );
 
-    if (
-      Number.isFinite(
-        gregorianYear,
-      )
+    if (error) {
+      throw new Error(
+        `ไม่สามารถโหลดปีได้: ${error.message}`,
+      );
+    }
+
+    const batch =
+      data ?? [];
+
+    for (
+      const row of batch
     ) {
-      years.add(
-        gregorianYear +
-          543,
+      if (
+        !row.quotation_date
+      ) {
+        continue;
+      }
+
+      const gregorianYear =
+        Number(
+          row.quotation_date.slice(
+            0,
+            4,
+          ),
+        );
+
+      if (
+        Number.isFinite(
+          gregorianYear,
+        )
+      ) {
+        years.add(
+          gregorianYear +
+            543,
+        );
+      }
+    }
+
+    if (
+      batch.length <
+      FETCH_BATCH_SIZE
+    ) {
+      return [
+        ...years,
+      ].sort(
+        (a, b) =>
+          b - a,
       );
     }
   }
-
-  return [
-    ...years,
-  ].sort(
-    (a, b) =>
-      b - a,
-  );
 }

@@ -10,6 +10,41 @@ import type {
 
 const PAGE_SIZE = 20;
 
+const FETCH_BATCH_SIZE = 1000;
+
+type CustomerSummaryQuotationRow = {
+  quotation_date: string | null;
+  total_amount: number | string | null;
+};
+
+async function getAllCustomerSummaryRows(
+  customerId: string,
+): Promise<CustomerSummaryQuotationRow[]> {
+  const supabase = createAdminSupabaseClient();
+  const rows: CustomerSummaryQuotationRow[] = [];
+
+  for (let from = 0; ; from += FETCH_BATCH_SIZE) {
+    const { data, error } = await supabase
+      .from("quotations")
+      .select("quotation_date, total_amount")
+      .eq("customer_id", customerId)
+      .is("deleted_at", null)
+      .order("quotation_date", { ascending: true, nullsFirst: false })
+      .range(from, from + FETCH_BATCH_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Unable to load customer quotations: ${error.message}`);
+    }
+
+    const batch = (data ?? []) as CustomerSummaryQuotationRow[];
+    rows.push(...batch);
+
+    if (batch.length < FETCH_BATCH_SIZE) {
+      return rows;
+    }
+  }
+}
+
 export type CustomerDetail = {
   id: string;
   name: string;
@@ -326,43 +361,10 @@ export async function getCustomerById(
 export async function getCustomerQuotationSummary(
   customerId: string,
 ): Promise<CustomerQuotationSummary> {
-  const supabase =
-    createAdminSupabaseClient();
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      `
-        quotation_date,
-        total_amount
-      `,
-    )
-    .eq(
-      "customer_id",
-      customerId,
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .range(
-      0,
-      9999,
-    );
-
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดข้อมูลสรุปลูกค้าได้: ${error.message}`,
-    );
-  }
-
   const rows =
-    data ?? [];
+    await getAllCustomerSummaryRows(
+      customerId,
+    );
 
   let totalAmount = 0;
 
@@ -648,49 +650,14 @@ export async function getCustomerQuotations(
 export async function getCustomerQuotationYears(
   customerId: string,
 ): Promise<number[]> {
-  const supabase =
-    createAdminSupabaseClient();
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from(
-      "quotations",
-    )
-    .select(
-      "quotation_date",
-    )
-    .eq(
-      "customer_id",
-      customerId,
-    )
-    .is(
-      "deleted_at",
-      null,
-    )
-    .not(
-      "quotation_date",
-      "is",
-      null,
-    )
-    .range(
-      0,
-      9999,
-    );
-
-  if (error) {
-    throw new Error(
-      `ไม่สามารถโหลดปีของลูกค้าได้: ${error.message}`,
-    );
-  }
-
   const years =
     new Set<number>();
 
   for (
     const row of
-      data ?? []
+      await getAllCustomerSummaryRows(
+        customerId,
+      )
   ) {
     if (
       !row.quotation_date
