@@ -463,6 +463,42 @@ export async function getCustomerOptions(): Promise<
     createAdminSupabaseClient();
 
   const {
+    data: summaryData,
+    error: summaryError,
+  } = await supabase
+    .from(
+      "quotation_yearly_summary",
+    )
+    .select(
+      "gregorian_year",
+    );
+
+  if (!summaryError) {
+    return (
+      summaryData ?? []
+    )
+      .map(
+        (row) =>
+          row.gregorian_year +
+          543,
+      )
+      .sort(
+        (a, b) =>
+          b - a,
+      );
+  }
+
+  // Supports environments that have not yet run the reporting-view migration.
+  if (
+    summaryError.code !==
+    "PGRST205"
+  ) {
+    throw new Error(
+      `Unable to load quotation years: ${summaryError.message}`,
+    );
+  }
+
+  const {
     data,
     error,
   } = await supabase
