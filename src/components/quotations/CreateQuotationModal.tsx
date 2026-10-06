@@ -12,6 +12,10 @@ import {
 } from "react";
 
 import {
+  createPortal,
+} from "react-dom";
+
+import {
   QuotationCreateForm,
 } from "@/components/quotations/QuotationCreateForm";
 
@@ -34,6 +38,15 @@ export function CreateQuotationModal({
     open,
     setOpen,
   ] = useState(false);
+
+  const [
+    mounted,
+    setMounted,
+  ] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /*
    * ปิด Modal ทันที
@@ -145,19 +158,18 @@ export function CreateQuotationModal({
       {/* =====================================================
        * Modal
        * =================================================== */}
-      {open && (
+      {open && mounted && createPortal(
         <div
           className="
             fixed
             inset-0
             z-[100]
-            flex
-            items-center
-            justify-center
+            grid
+            place-items-center
             bg-[#101828]/55
-            p-3
+            p-4
             backdrop-blur-[2px]
-            sm:p-5
+            sm:p-8
           "
           /*
            * คลิกพื้นที่มืดด้านนอก
@@ -182,7 +194,7 @@ export function CreateQuotationModal({
               dialog-enter
               relative
               flex
-              max-h-[92vh]
+              max-h-[calc(100dvh-2rem)]
               w-full
               max-w-[1050px]
               flex-col
@@ -309,7 +321,8 @@ export function CreateQuotationModal({
               }
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
