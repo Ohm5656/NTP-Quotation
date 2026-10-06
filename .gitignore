@@ -1,2 +1,41 @@
-.env.local
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# local env
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# company source data
+/data/*.xlsx
+/data/*.xls
+/data/*.csv
+
+# keep folder
+!/data/.gitkeep
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
