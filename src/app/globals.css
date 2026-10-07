@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "TH Sarabun New";
+  src: url("/fonts/thsarabunnew.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TH Sarabun New";
+  src: url("/fonts/thsarabunnew-bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   --ntp-blue: #17379c;
   --ntp-blue-dark: #10266f;
@@ -62,6 +78,13 @@ a {
 ::selection {
   background: var(--ntp-blue);
   color: white;
+}
+
+.quotation-worksheet,
+.quotation-worksheet input,
+.quotation-worksheet textarea,
+.quotation-worksheet button {
+  font-family: "TH Sarabun New", Tahoma, sans-serif;
 }
 
 @keyframes route-enter {

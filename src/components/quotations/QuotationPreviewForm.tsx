@@ -93,7 +93,7 @@ export function QuotationPreviewForm({
     if (!paymentTerm.trim() && profile.paymentTerm) setPaymentTerm(paymentText(profile.paymentTerm));
   }
 
-  const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[13px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
+  const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[18px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
 
   return (
     <form action={formAction} className="min-h-0 overflow-y-auto bg-[#667085]/20 p-3 sm:p-6">
@@ -103,7 +103,7 @@ export function QuotationPreviewForm({
         </div>
       )}
 
-      <article className="mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 font-serif text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
+      <article className="quotation-worksheet mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
         <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-[11px] text-[#667085]">
           <span>QUOTATION WORKSHEET</span>
           <span className="hidden sm:inline">ช่องสีครีมคือช่องที่กรอกได้ · กด Tab เพื่อเลื่อนไปช่องถัดไป</span>
@@ -116,7 +116,7 @@ export function QuotationPreviewForm({
               <p className="mt-1 text-xs font-semibold">(สำนักงานใหญ่) เลขประจำตัวผู้เสียภาษี 0-1155-59027-64-1</p>
               <p className="text-lg font-bold tracking-wide">NTP ELECTRIC AND ENGINEERING CO., LTD.</p>
               <p className="mt-2 text-xs">107/83 หมู่ที่ 12 ตำบลบางปลา อำเภอบางพลี จังหวัดสมุทรปราการ 10540</p>
-              <p className="text-xs text-blue-700 underline">TEL:02-102-3363 FAX :02-102-4944 Email:ntpelectric2017@gmail.com</p>
+              <p className="text-xs text-blue-700 underline">TEL:02-102-3363 FAX :081-375-2024 Email:ntpelectric2017@gmail.com</p>
             </div>
           </div>
           <div className="mt-4 text-center"><span className="inline-block rounded-lg border border-[#5270a9] bg-[#dbe4ff] px-6 py-1.5 text-xl font-bold shadow-sm">Quotation <span className="text-sm font-semibold">(ใบเสนอราคา)</span></span></div>
@@ -142,7 +142,7 @@ export function QuotationPreviewForm({
         </section>
 
         <section className="border-b border-[#0f172a] py-2">
-          <div className="grid grid-cols-[70px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">Project :</label><input name="project_name" defaultValue={quotation?.project_name ?? ""} className={`${fieldClass} font-bold`} placeholder="ชื่อโปรเจกต์ — รายละเอียดงานให้ใส่ในตารางด้านล่าง" /></div>
+          <div className="grid grid-cols-[70px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">Project :</label><input name="project_name" defaultValue={quotation?.project_name ?? ""} className={`${fieldClass} font-bold`} placeholder="ชื่อโปรเจกต์" /></div>
           <p className="mt-2 pl-[70px] text-xs">บริษัทมีความยินดีที่จะเสนอราคาสินค้า ดังต่อไปนี้ :</p>
         </section>
 
@@ -162,9 +162,9 @@ export function QuotationPreviewForm({
           <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" defaultValue={quotation?.email ?? ""} className="ml-2 h-7 w-52 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
         </section>
 
-        <footer className="mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-center text-sm">
-          <div>ผู้อนุมัติสั่งซื้อ<br /><span className="inline-block pt-7">วันที่....................................</span></div>
-          <div>ผู้เสนอราคา<br /><span className="inline-block pt-7">(นายณัฐพล ลุนะหา)</span><br /><span className="text-xs">T.081-3752024</span></div>
+        <footer className="mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-[18px] leading-tight">
+          <div className="pl-[12%] text-left"><p>ผู้อนุมัติสั่งซื้อ..........................</p><p className="mt-3">วันที่........................................</p></div>
+          <div className="text-center"><p>ผู้เสนอราคา</p><span className="inline-block pt-7">(นายณัฐพล ลุนะหา)</span><br /><span className="text-[16px]">T.081-3752024</span></div>
         </footer>
       </article>
 
