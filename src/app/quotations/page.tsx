@@ -2,6 +2,7 @@ import {
   getAvailableQuotationYears,
   getContactOptions,
   getCustomerOptions,
+  getNextQuotationNumber,
   getPaymentTermOptions,
   getQuotations,
 } from "@/lib/queries/quotations";
@@ -153,6 +154,9 @@ export default async function QuotationsPage({
     params.customer ??
     "";
 
+  const defaultDate =
+    getCurrentThaiDate();
+
   const [
     result,
     customers,
@@ -160,6 +164,7 @@ export default async function QuotationsPage({
     customerProfiles,
     paymentTerms,
     contacts,
+    suggestedQuotationNo,
   ] =
     await Promise.all([
       getQuotations({
@@ -179,10 +184,9 @@ export default async function QuotationsPage({
       getPaymentTermOptions(),
 
       getContactOptions(),
-    ]);
 
-  const defaultDate =
-    getCurrentThaiDate();
+      getNextQuotationNumber(defaultDate),
+    ]);
 
   /*
    * Pagination จำ Filter เดิม
@@ -299,6 +303,7 @@ export default async function QuotationsPage({
             paymentTerms={paymentTerms}
             contacts={contacts}
             defaultDate={defaultDate}
+            suggestedQuotationNo={suggestedQuotationNo}
           />
         </div>
       </div>

@@ -38,6 +38,8 @@ type Props = {
   contacts?: string[];
 
   defaultDate: string;
+
+  suggestedQuotationNo: string;
 };
 
 export function CreateQuotationModal({
@@ -46,6 +48,7 @@ export function CreateQuotationModal({
   paymentTerms = [],
   contacts = [],
   defaultDate,
+  suggestedQuotationNo,
 }: Props) {
   const [
     open,
@@ -316,6 +319,7 @@ export function CreateQuotationModal({
               paymentTerms={paymentTerms}
               contacts={contacts}
               defaultDate={defaultDate}
+              suggestedQuotationNo={suggestedQuotationNo}
               onCancel={closeModal}
               onSuccess={handleSuccess}
             />

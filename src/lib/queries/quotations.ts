@@ -467,6 +467,93 @@ export async function getQuotations(
   };
 }
 
+/**
+ * Returns the next quotation number for a Thai calendar date.
+ *
+ * Number format: YYMMNNN, for example the first quotation in September
+ * 2569 is 6909001. Revision suffixes (R) deliberately share the same
+ * running number and never consume the next number.
+ */
+export async function getNextQuotationNumber(
+  thaiDate: string,
+): Promise<string> {
+  const [
+    ,
+    monthText,
+    yearText,
+  ] = thaiDate.split("/");
+
+  const month =
+    Number(monthText);
+
+  const enteredYear =
+    Number(yearText);
+
+  if (
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isInteger(enteredYear)
+  ) {
+    throw new Error("Invalid quotation date");
+  }
+
+  const buddhistYear =
+    enteredYear >= 2400
+      ? enteredYear
+      : enteredYear + 543;
+
+  const prefix = `${String(buddhistYear).slice(-2)}${String(month).padStart(2, "0")}`;
+  const supabase =
+    createAdminSupabaseClient();
+
+  let highestSequence = 0;
+
+  for (
+    let from = 0;
+    ;
+    from += FETCH_BATCH_SIZE
+  ) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("quotations")
+      .select("quotation_no")
+      .is("deleted_at", null)
+      .ilike("quotation_no", `${prefix}%`)
+      .range(
+        from,
+        from + FETCH_BATCH_SIZE - 1,
+      );
+
+    if (error) {
+      throw new Error(
+        `Unable to prepare the next quotation number: ${error.message}`,
+      );
+    }
+
+    const batch = data ?? [];
+    const numberPattern = new RegExp(`^${prefix}(\\d{3})(?:R)?$`, "i");
+
+    for (const quotation of batch) {
+      const match = quotation.quotation_no?.trim().match(numberPattern);
+      if (match) {
+        highestSequence = Math.max(
+          highestSequence,
+          Number(match[1]),
+        );
+      }
+    }
+
+    if (batch.length < FETCH_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return `${prefix}${String(highestSequence + 1).padStart(3, "0")}`;
+}
+
 /* =========================================================
  * Customers
  * ======================================================= */

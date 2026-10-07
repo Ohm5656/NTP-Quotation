@@ -111,7 +111,6 @@ export function QuotationLineItemsEditor({
       <div className="flex flex-wrap items-end justify-between gap-3 border-x border-t border-[#1e293b] bg-[#f7f8ff] px-3 py-2">
         <div>
           <h3 className="text-sm font-bold text-[#172033]">รายการสินค้าและบริการ</h3>
-          <p className="mt-0.5 text-xs text-[#667085]">กรอกในช่องตารางได้โดยตรง · กด Tab เพื่อเลื่อนไปช่องถัดไป · ราคายังไม่รวม VAT</p>
         </div>
         <span className="text-xs text-[#667085]">สูงสุด 12 บรรทัด</span>
       </div>
