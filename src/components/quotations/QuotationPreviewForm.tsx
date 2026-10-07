@@ -164,7 +164,7 @@ export function QuotationPreviewForm({
 
         <footer className="worksheet-signature mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-[18px] leading-tight">
           <div className="pl-[12%] text-left"><p>ผู้อนุมัติสั่งซื้อ..........................</p><p className="mt-3">วันที่........................................</p></div>
-          <div className="text-center"><p>ผู้เสนอราคา</p><span className="inline-block pt-7">(นายณัฐพล ลุนะหา)</span><br /><span className="text-[16px]">T.081-3752024</span></div>
+          <div className="text-center"><p>ผู้เสนอราคา</p><span className="inline-block pt-7">(นายณัฐพล ลุนะหา)</span><br /><span className="worksheet-signature-phone text-[16px]">T.081-3752024</span></div>
         </footer>
       </article>
 
