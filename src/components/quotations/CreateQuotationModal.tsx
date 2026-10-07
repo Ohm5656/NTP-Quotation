@@ -16,8 +16,8 @@ import {
 } from "react-dom";
 
 import {
-  QuotationCreateForm,
-} from "@/components/quotations/QuotationCreateForm";
+  QuotationPreviewForm,
+} from "@/components/quotations/QuotationPreviewForm";
 
 import type {
   CustomerOption,
@@ -209,7 +209,7 @@ export function CreateQuotationModal({
               flex
               max-h-[calc(100dvh-2rem)]
               w-full
-              max-w-[1050px]
+              max-w-[1280px]
               flex-col
               overflow-hidden
               rounded-2xl
@@ -318,23 +318,14 @@ export function CreateQuotationModal({
             {/* =============================================
              * Form
              * =========================================== */}
-            <QuotationCreateForm
-              customers={
-                customers
-              }
+            <QuotationPreviewForm
+              customers={customers}
               customerProfiles={customerProfiles}
               paymentTerms={paymentTerms}
               contacts={contacts}
-              defaultDate={
-                defaultDate
-              }
-              mode="modal"
-              onCancel={
-                closeModal
-              }
-              onSuccess={
-                handleSuccess
-              }
+              defaultDate={defaultDate}
+              onCancel={closeModal}
+              onSuccess={handleSuccess}
             />
           </div>
         </div>,

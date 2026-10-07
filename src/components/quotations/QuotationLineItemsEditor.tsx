@@ -1,6 +1,6 @@
 "use client";
 
-import { ListPlus, Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { QuotationLineItem } from "@/types/database";
@@ -53,8 +53,15 @@ export function QuotationLineItemsEditor({
   isNew,
 }: Props) {
   const [items, setItems] = useState<DraftItem[]>(() => {
-    if (initialItems.length) return initialItems.map(makeDraft);
-    return isNew ? [makeDraft()] : [];
+    const savedItems = [...initialItems]
+      .sort((a, b) => a.line_no - b.line_no)
+      .slice(0, 12)
+      .map(makeDraft);
+    const blankItems = Array.from({ length: Math.max(0, 12 - savedItems.length) }, (_, index) => ({
+      ...makeDraft(undefined, savedItems.length + index),
+      showItemNumber: savedItems.length + index !== 0,
+    }));
+    return [...savedItems, ...blankItems];
   });
   const [remarks, setRemarks] = useState(initialRemarks ?? "ยืนราคา 30 วันนับจากวันเสนอราคา");
   const [discount, setDiscount] = useState(numberText(initialDiscount ?? 0));
@@ -90,11 +97,15 @@ export function QuotationLineItemsEditor({
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
   }
 
-  function addItem(showItemNumber: boolean) {
-    setItems((current) => [
-      ...current,
-      { ...makeDraft(undefined, current.length), showItemNumber },
-    ]);
+  function clearItem(key: string) {
+    setItems((current) => current.map((item) => item.key === key ? {
+      ...item,
+      description: "",
+      unitPrice: "",
+      quantity: "",
+      unit: "",
+      showItemNumber: true,
+    } : item));
   }
 
   return (
@@ -105,51 +116,45 @@ export function QuotationLineItemsEditor({
       <input type="hidden" name="vat_rate" value={totals.vatRate.toFixed(4)} />
       <input type="hidden" name="remarks" value={remarks} />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-[#172033]">รายการสินค้าและบริการ</h3>
-          <p className="mt-1 text-xs text-[#667085]">กรอกรายการที่จะปรากฏในตารางของใบเสนอราคา</p>
+          <h3 className="text-sm font-bold text-[#172033]">รายละเอียดงาน / รายการสินค้าและบริการ</h3>
+          <p className="mt-1 text-xs text-[#667085]">ราคาทุกรายการเป็นราคาก่อน VAT เหมือนตารางในไฟล์ใบเสนอราคา</p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" disabled={items.length >= 12} onClick={() => addItem(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#17379c] px-3 text-xs font-semibold text-white transition hover:bg-[#10266f] disabled:cursor-not-allowed disabled:opacity-50">
-            <Plus size={15} /> เพิ่มรายการ
-          </button>
-          <button type="button" disabled={items.length >= 12} onClick={() => addItem(false)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d0d5dd] bg-white px-3 text-xs font-semibold text-[#475467] transition hover:bg-[#f8f9fc] disabled:cursor-not-allowed disabled:opacity-50">
-            <ListPlus size={15} /> เพิ่มหัวข้อ
-          </button>
-        </div>
+        <span className="text-xs text-[#667085]">กรอกได้สูงสุด 12 บรรทัด</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[#d0d5dd]">
+      <div className="overflow-x-auto border border-[#2d3c78]">
         <table className="w-full min-w-[780px] border-collapse text-sm">
-          <thead className="bg-[#eef2ff] text-xs font-semibold text-[#344054]">
+          <thead className="bg-[#d8d8f7] text-xs font-bold text-[#172033]">
             <tr>
-              <th className="w-14 px-2 py-2.5 text-center">ลำดับ</th>
-              <th className="px-2 py-2.5 text-left">รายละเอียด</th>
-              <th className="w-28 px-2 py-2.5 text-right">ราคาต่อหน่วย</th>
-              <th className="w-20 px-2 py-2.5 text-right">จำนวน</th>
-              <th className="w-24 px-2 py-2.5 text-left">หน่วย</th>
-              <th className="w-28 px-2 py-2.5 text-right">จำนวนเงิน</th>
+              <th className="w-14 border-r border-[#2d3c78] px-2 py-2.5 text-center">Item</th>
+              <th className="border-r border-[#2d3c78] px-2 py-2.5 text-left">Description</th>
+              <th className="w-28 border-r border-[#2d3c78] px-2 py-2.5 text-right">Unit Price</th>
+              <th className="w-20 border-r border-[#2d3c78] px-2 py-2.5 text-right">Qty</th>
+              <th className="w-24 border-r border-[#2d3c78] px-2 py-2.5 text-left">Unit</th>
+              <th className="w-28 px-2 py-2.5 text-right">Amount</th>
               <th className="w-10 px-1 py-2.5" />
             </tr>
           </thead>
           <tbody>
             {items.map((item, index) => {
               const lineTotal = asNumber(item.unitPrice) * asNumber(item.quantity);
+              const displayNumber = items.slice(0, index + 1).filter((entry) => entry.showItemNumber).length;
               return (
-                <tr key={item.key} className="border-t border-[#eaecf0] align-top">
-                  <td className="px-2 py-2 text-center">
+                <tr key={item.key} className="border-t border-[#2d3c78] align-top">
+                  <td className="border-r border-[#2d3c78] px-2 py-2 text-center">
                     <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-[#667085]" title="ซ่อนเลขลำดับสำหรับหัวข้อหรือข้อความประกอบ">
                       <input type="checkbox" checked={item.showItemNumber} onChange={(event) => updateItem(item.key, { showItemNumber: event.currentTarget.checked })} className="accent-[#17379c]" />
-                      {item.showItemNumber ? index + 1 : "–"}
+                      {item.showItemNumber ? displayNumber : "–"}
                     </label>
                   </td>
-                  <td className="px-2 py-2"><textarea value={item.description} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder="รายละเอียดสินค้า / ขอบเขตงาน" className="min-h-9 w-full resize-y rounded-md border border-[#d0d5dd] px-2 py-1.5 outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
-                  <td className="px-2 py-2"><input value={item.unitPrice} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} inputMode="decimal" placeholder="0.00" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 text-right outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
-                  <td className="px-2 py-2"><input value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} inputMode="decimal" placeholder="0" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 text-right outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
-                  <td className="px-2 py-2"><input value={item.unit} onChange={(event) => updateItem(item.key, { unit: event.currentTarget.value })} placeholder="SET" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
+                  <td className="border-r border-[#2d3c78] px-2 py-2"><textarea value={item.description} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder="รายละเอียดสินค้า / ขอบเขตงาน" className="min-h-9 w-full resize-y rounded-md border border-[#d0d5dd] px-2 py-1.5 outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
+                  <td className="border-r border-[#2d3c78] px-2 py-2"><input value={item.unitPrice} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} inputMode="decimal" placeholder="0.00" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 text-right outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
+                  <td className="border-r border-[#2d3c78] px-2 py-2"><input value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} inputMode="decimal" placeholder="0" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 text-right outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
+                  <td className="border-r border-[#2d3c78] px-2 py-2"><input value={item.unit} onChange={(event) => updateItem(item.key, { unit: event.currentTarget.value })} placeholder="SET" className="h-9 w-full rounded-md border border-[#d0d5dd] px-2 outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" /></td>
                   <td className="px-2 py-2 text-right font-semibold text-[#17379c]">{lineTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="px-1 py-2"><button type="button" onClick={() => setItems((current) => current.filter((entry) => entry.key !== item.key))} aria-label="ลบรายการ" className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#98a2b3] transition hover:bg-[#fff1f2] hover:text-[#df001b]"><Trash2 size={16} /></button></td>
+                  <td className="px-1 py-2"><button type="button" onClick={() => clearItem(item.key)} aria-label="ล้างรายการ" className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#98a2b3] transition hover:bg-[#fff1f2] hover:text-[#df001b]"><Trash2 size={16} /></button></td>
                 </tr>
               );
             })}
@@ -157,16 +162,17 @@ export function QuotationLineItemsEditor({
         </table>
       </div>
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_330px]">
-        <div>
+      <div className="grid gap-0 lg:grid-cols-[1fr_330px]">
+        <div className="border border-t-0 border-[#2d3c78] p-3">
           <label htmlFor="remarks" className="mb-2 block text-sm font-semibold text-[#344054]">หมายเหตุ</label>
           <textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.currentTarget.value)} rows={3} placeholder="เช่น ยืนราคา 30 วันนับจากวันเสนอราคา" className="w-full resize-y rounded-lg border border-[#d0d5dd] px-3 py-2.5 text-sm outline-none focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10" />
         </div>
-        <div className="rounded-xl border border-[#d0d5dd] bg-[#f8f9fc] p-4">
-          <label className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-[#344054]">ส่วนลด <input value={discount} onChange={(event) => setDiscount(event.currentTarget.value)} inputMode="decimal" className="h-9 w-32 rounded-md border border-[#d0d5dd] bg-white px-2 text-right font-normal outline-none focus:border-[#17379c]" /></label>
-          <div className="flex items-center justify-between border-t border-[#d0d5dd] py-2 text-sm"><span>ยอดก่อน VAT</span><strong>{(totals.subtotal - totals.discountAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-          <label className="flex items-center justify-between gap-3 py-1 text-sm">VAT <input value={vatPercent} onChange={(event) => setVatPercent(event.currentTarget.value)} inputMode="decimal" className="h-9 w-20 rounded-md border border-[#d0d5dd] bg-white px-2 text-right outline-none focus:border-[#17379c]" /></label>
-          <div className="flex items-center justify-between border-t border-[#d0d5dd] pt-3 text-base font-bold text-[#17379c]"><span>ยอดรวมสุทธิ</span><span>{totals.grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+        <div className="border border-[#2d3c78] bg-white text-sm">
+          <div className="flex items-center justify-between border-b border-[#2d3c78] px-3 py-2"><strong>Total</strong><strong>{totals.subtotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          <label className="flex items-center justify-between gap-3 border-b border-[#2d3c78] px-3 py-1.5 font-bold">DISCOUNT <input value={discount} onChange={(event) => setDiscount(event.currentTarget.value)} inputMode="decimal" placeholder="0.00" className="h-8 w-32 border border-[#d0d5dd] px-2 text-right font-normal outline-none focus:border-[#17379c]" /></label>
+          <div className="flex items-center justify-between border-b border-[#2d3c78] px-3 py-2"><strong>SUB TOTAL</strong><strong>{Math.max(0, totals.subtotal - totals.discountAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          <label className="flex items-center justify-between gap-3 border-b border-[#2d3c78] px-3 py-1.5 font-bold">VAT <span className="flex items-center gap-1"><input value={vatPercent} onChange={(event) => setVatPercent(event.currentTarget.value)} inputMode="decimal" className="h-8 w-16 border border-[#d0d5dd] px-2 text-right font-normal outline-none focus:border-[#17379c]" />%</span></label>
+          <div className="flex items-center justify-between bg-[#f7f8ff] px-3 py-3 text-base font-bold text-[#17379c]"><span>Grand Total</span><span>{totals.grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
         </div>
       </div>
     </section>

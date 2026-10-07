@@ -406,7 +406,7 @@ export function QuotationCreateForm({
               grid
               gap-5
               md:grid-cols-2
-              xl:grid-cols-3
+              xl:grid-cols-4
             "
           >
             {/* Date */}
@@ -638,6 +638,27 @@ export function QuotationCreateForm({
                 />
               </div>
             </div>
+
+            <div>
+              <label htmlFor="payment_term" className="mb-2 block text-sm font-semibold text-[#344054]">
+                เงื่อนไขการชำระเงิน
+              </label>
+              <input
+                id="payment_term"
+                name="payment_term"
+                type="text"
+                list="payment-term-options"
+                defaultValue={quotation?.payment_term ?? ""}
+                placeholder="เช่น เครดิต 15 วัน"
+                autoComplete="off"
+                className="h-11 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-sm text-[#172033] outline-none transition focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10"
+              />
+              <datalist id="payment-term-options">
+                {paymentTermOptions.map((term) => (
+                  <option key={term} value={term} />
+                ))}
+              </datalist>
+            </div>
           </div>
         </section>
 
@@ -759,8 +780,7 @@ export function QuotationCreateForm({
                   text-[#98a2b3]
                 "
               >
-                เลือกลูกค้าเดิม
-                หรือพิมพ์ชื่อลูกค้าใหม่ได้
+                เลือกลูกค้าจากรายการเพื่อเติมที่อยู่และเลขผู้เสียภาษีใน Excel อัตโนมัติ
               </p>
             </div>
 
@@ -776,7 +796,7 @@ export function QuotationCreateForm({
                   text-[#344054]
                 "
               >
-                ชื่องาน
+                Project / ชื่อโปรเจกต์
 
                 <span
                   className="
@@ -796,7 +816,7 @@ export function QuotationCreateForm({
                   quotation?.project_name ??
                   ""
                 }
-                placeholder="กรอกชื่องาน / รายละเอียดงาน"
+                placeholder="เช่น งานเปลี่ยนตู้คอนโทรล MYPRO TOUCH"
                 className="
                   min-h-[92px]
                   w-full
@@ -1026,28 +1046,29 @@ export function QuotationCreateForm({
                   focus:ring-[#17379c]/10
                 "
               />
+
             </div>
 
-            <div>
+            <div className="hidden" aria-hidden="true">
               <label
-                htmlFor="payment_term"
+                htmlFor="payment_term_legacy"
                 className="mb-2 block text-sm font-semibold text-[#344054]"
               >
                 เงื่อนไขชำระเงิน
               </label>
 
               <input
-                id="payment_term"
-                name="payment_term"
+                id="payment_term_legacy"
+                name="payment_term_legacy"
                 type="text"
-                list="payment-term-options"
+                list="payment-term-options-legacy"
                 defaultValue={quotation?.payment_term ?? ""}
                 placeholder="เช่น เครดิต 15 วัน"
                 autoComplete="off"
                 className="h-11 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-sm text-[#172033] outline-none transition focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10"
               />
 
-              <datalist id="payment-term-options">
+              <datalist id="payment-term-options-legacy">
                 {paymentTermOptions.map((term) => (
                   <option key={term} value={term} />
                 ))}

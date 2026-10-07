@@ -15,8 +15,8 @@ import {
 } from "react-dom";
 
 import {
-  QuotationCreateForm,
-} from "@/components/quotations/QuotationCreateForm";
+  QuotationPreviewForm,
+} from "@/components/quotations/QuotationPreviewForm";
 
 import type {
   CustomerOption,
@@ -96,7 +96,7 @@ export function EditQuotationButton({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`edit-quotation-title-${quotation.id}`}
-            className="dialog-enter relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1050px] flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-[0_30px_80px_rgba(16,24,40,0.30)]"
+            className="dialog-enter relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-[0_30px_80px_rgba(16,24,40,0.30)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#eaecf0] bg-white px-6 py-5">
@@ -126,7 +126,7 @@ export function EditQuotationButton({
               </button>
             </div>
 
-            <QuotationCreateForm
+            <QuotationPreviewForm
               key={quotation.id}
               customers={customers}
               customerProfiles={customerProfiles}
@@ -134,7 +134,6 @@ export function EditQuotationButton({
               contacts={contacts}
               defaultDate=""
               quotation={quotation}
-              mode="modal"
               onCancel={() => setOpen(false)}
               onSuccess={() => setOpen(false)}
             />
