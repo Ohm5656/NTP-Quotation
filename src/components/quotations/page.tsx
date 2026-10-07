@@ -253,6 +253,9 @@ export default async function QuotationsPage({
         quotations={
           result.items
         }
+        customers={
+          customers
+        }
       />
 
       <QuotationPagination

@@ -14,13 +14,25 @@ import {
   DeleteQuotationButton,
 } from "@/components/quotations/DeleteQuotationButton";
 
+import {
+  EditQuotationButton,
+} from "@/components/quotations/EditQuotationButton";
+
+import type {
+  CustomerOption,
+} from "@/types/database";
+
 type Props = {
   quotations:
     QuotationListItem[];
+
+  customers?:
+    CustomerOption[];
 };
 
 export function QuotationTable({
   quotations,
+  customers = [],
 }: Props) {
   if (
     quotations.length ===
@@ -109,7 +121,7 @@ export function QuotationTable({
 
               <th
                 className="
-                  w-[80px]
+                  w-[112px]
                   px-4
                   py-3
                   text-center
@@ -288,17 +300,24 @@ export function QuotationTable({
                       text-center
                     "
                   >
-                    <DeleteQuotationButton
-                      quotationId={
-                        quotation.id
-                      }
-                      quotationNo={
-                        quotation.quotation_no
-                      }
-                      customerId={
-                        quotation.customer_id
-                      }
-                    />
+                    <div className="flex items-center justify-center gap-1">
+                      <EditQuotationButton
+                        quotation={quotation}
+                        customers={customers}
+                      />
+
+                      <DeleteQuotationButton
+                        quotationId={
+                          quotation.id
+                        }
+                        quotationNo={
+                          quotation.quotation_no
+                        }
+                        customerId={
+                          quotation.customer_id
+                        }
+                      />
+                    </div>
                   </td>
                 </tr>
               ),

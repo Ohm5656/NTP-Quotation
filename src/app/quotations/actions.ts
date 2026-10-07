@@ -624,6 +624,129 @@ export async function createQuotation(
 }
 
 /* =========================================================
+ * Update Quotation
+ * ======================================================= */
+
+export async function updateQuotation(
+  quotationId: string,
+  previousCustomerId: string | null,
+  _previousState: CreateQuotationState,
+  formData: FormData,
+): Promise<CreateQuotationState> {
+  if (!quotationId) {
+    return {
+      success: false,
+      error: "ไม่พบใบเสนอราคาที่ต้องการแก้ไข",
+    };
+  }
+
+  const quotationNoRaw = getString(formData, "quotation_no");
+  const quotationDateRaw = getString(formData, "quotation_date");
+  const customerInput = String(formData.get("customer_name") ?? "");
+  const projectName = getString(formData, "project_name");
+  const totalAmountRaw = getString(formData, "total_amount");
+  const email = optionalString(formData, "email");
+  const fieldErrors: CreateQuotationState["fieldErrors"] = {};
+
+  const quotationDate = parseThaiDate(quotationDateRaw);
+  if (quotationDateRaw && !quotationDate) {
+    fieldErrors.quotationDate = "รูปแบบวันที่ไม่ถูกต้อง เช่น 06/10/2569";
+  }
+
+  const totalAmount = parseAmount(totalAmountRaw);
+  if (totalAmountRaw && totalAmount === null) {
+    fieldErrors.totalAmount = "มูลค่าไม่ถูกต้อง";
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    fieldErrors.email = "รูปแบบ E-mail ไม่ถูกต้อง";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      success: false,
+      fieldErrors,
+    };
+  }
+
+  let customer: {
+    id: string | null;
+    name: string | null;
+  };
+
+  try {
+    customer = await resolveCustomer(customerInput);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error
+        ? `ไม่สามารถบันทึกลูกค้าได้: ${error.message}`
+        : "ไม่สามารถบันทึกลูกค้าได้",
+    };
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const {
+    data: updatedQuotation,
+    error,
+  } = await supabase
+    .from("quotations")
+    .update({
+      quotation_no: quotationNoRaw
+        ? normalizeQuotationNo(quotationNoRaw)
+        : null,
+      quotation_date: quotationDateRaw
+        ? quotationDate
+        : null,
+      boq_no: normalizeBoqNo(optionalString(formData, "boq_no")),
+      customer_id: customer.id,
+      customer_name_raw: customer.name,
+      project_name: projectName || null,
+      total_amount: totalAmount,
+      po: optionalString(formData, "po"),
+      attention: optionalString(formData, "attention"),
+      email,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", quotationId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: `ไม่สามารถบันทึกการแก้ไขได้: ${error.message}`,
+    };
+  }
+
+  if (!updatedQuotation) {
+    return {
+      success: false,
+      error: "ไม่พบใบเสนอราคาที่ต้องการแก้ไข หรือรายการถูกลบไปแล้ว",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/quotations");
+  revalidatePath("/customers");
+  revalidatePath("/reports/monthly");
+  revalidatePath("/reports/yearly");
+
+  if (previousCustomerId) {
+    revalidatePath(`/customers/${previousCustomerId}`);
+  }
+
+  if (customer.id) {
+    revalidatePath(`/customers/${customer.id}`);
+  }
+
+  return {
+    success: true,
+  };
+}
+
+/* =========================================================
  * Delete Quotation
  *
  * Soft Delete:

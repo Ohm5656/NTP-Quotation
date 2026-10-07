@@ -23,10 +23,16 @@ import {
 import {
   createQuotation,
   type CreateQuotationState,
+  updateQuotation,
 } from "@/app/quotations/actions";
+
+import {
+  formatThaiDate,
+} from "@/lib/format";
 
 import type {
   CustomerOption,
+  QuotationListItem,
 } from "@/types/database";
 
 type Props = {
@@ -34,6 +40,8 @@ type Props = {
     CustomerOption[];
 
   defaultDate: string;
+
+  quotation?: QuotationListItem;
 
   mode?:
     | "page"
@@ -79,6 +87,7 @@ function FieldError({
 export function QuotationCreateForm({
   customers,
   defaultDate,
+  quotation,
   mode = "page",
   onCancel,
   onSuccess,
@@ -92,9 +101,17 @@ export function QuotationCreateForm({
     formAction,
     pending,
   ] = useActionState(
-    createQuotation,
+    quotation
+      ? updateQuotation.bind(
+          null,
+          quotation.id,
+          quotation.customer_id,
+        )
+      : createQuotation,
     initialState,
   );
+
+  const isEditing = Boolean(quotation);
 
   /*
    * หลังบันทึกสำเร็จ
@@ -374,7 +391,11 @@ export function QuotationCreateForm({
                 name="quotation_date"
                 type="text"
                 defaultValue={
-                  defaultDate
+                  quotation?.quotation_date
+                    ? formatThaiDate(
+                        quotation.quotation_date,
+                      )
+                    : defaultDate
                 }
                 placeholder="06/10/2569"
                 inputMode="numeric"
@@ -466,6 +487,10 @@ export function QuotationCreateForm({
                   id="quotation_no"
                   name="quotation_no"
                   type="text"
+                  defaultValue={
+                    quotation?.quotation_no ??
+                    ""
+                  }
                   placeholder="6909033"
                   autoComplete="off"
                   className="
@@ -540,6 +565,10 @@ export function QuotationCreateForm({
                   id="boq_no"
                   name="boq_no"
                   type="text"
+                  defaultValue={
+                    quotation?.boq_no ??
+                    ""
+                  }
                   placeholder="6909011"
                   autoComplete="off"
                   className="
@@ -629,6 +658,10 @@ export function QuotationCreateForm({
                 name="customer_name"
                 type="text"
                 list="customer-options"
+                defaultValue={
+                  quotation?.customer_name_raw ??
+                  ""
+                }
                 placeholder="เลือกหรือพิมพ์บริษัทใหม่"
                 autoComplete="off"
                 className="
@@ -708,6 +741,10 @@ export function QuotationCreateForm({
                 id="project_name"
                 name="project_name"
                 rows={3}
+                defaultValue={
+                  quotation?.project_name ??
+                  ""
+                }
                 placeholder="กรอกชื่องาน / รายละเอียดงาน"
                 className="
                   min-h-[92px]
@@ -828,6 +865,10 @@ export function QuotationCreateForm({
                   id="total_amount"
                   name="total_amount"
                   type="text"
+                  defaultValue={
+                    quotation?.total_amount ??
+                    ""
+                  }
                   inputMode="decimal"
                   placeholder="0.00"
                   autoComplete="off"
@@ -894,6 +935,10 @@ export function QuotationCreateForm({
                 id="po"
                 name="po"
                 type="text"
+                defaultValue={
+                  quotation?.po ??
+                  ""
+                }
                 placeholder="เช่น PX6900126"
                 autoComplete="off"
                 className="
@@ -993,6 +1038,10 @@ export function QuotationCreateForm({
                   id="attention"
                   name="attention"
                   type="text"
+                  defaultValue={
+                    quotation?.attention ??
+                    ""
+                  }
                   placeholder="ชื่อผู้ติดต่อ"
                   autoComplete="off"
                   className="
@@ -1048,6 +1097,10 @@ export function QuotationCreateForm({
                   id="email"
                   name="email"
                   type="email"
+                  defaultValue={
+                    quotation?.email ??
+                    ""
+                  }
                   placeholder="example@company.com"
                   autoComplete="email"
                   className="
@@ -1168,7 +1221,9 @@ export function QuotationCreateForm({
 
           {pending
             ? "กำลังบันทึก..."
-            : "บันทึกใบเสนอราคา"}
+            : isEditing
+              ? "บันทึกการแก้ไข"
+              : "บันทึกใบเสนอราคา"}
         </button>
       </div>
     </form>
