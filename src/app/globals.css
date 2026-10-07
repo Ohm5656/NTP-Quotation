@@ -96,39 +96,40 @@ a {
 
 /* Keep the worksheet comfortably legible while preserving the template-sized signatures. */
 .quotation-worksheet {
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1.15;
 }
 
 .quotation-worksheet :is(input, textarea) {
-  font-size: 26px;
+  min-height: 40px;
+  font-size: 28px;
   line-height: 1.15;
 }
 
 .quotation-worksheet .text-xs {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.15;
 }
 
 .quotation-worksheet .text-sm {
-  font-size: 23px;
+  font-size: 25px;
   line-height: 1.15;
 }
 
 .quotation-worksheet .text-base {
-  font-size: 26px;
+  font-size: 28px;
 }
 
 .quotation-worksheet .text-lg {
-  font-size: 30px;
+  font-size: 32px;
 }
 
 .quotation-worksheet .text-xl {
-  font-size: 34px;
+  font-size: 36px;
 }
 
 .quotation-worksheet .text-2xl {
-  font-size: 38px;
+  font-size: 40px;
 }
 
 .quotation-worksheet .worksheet-signature {

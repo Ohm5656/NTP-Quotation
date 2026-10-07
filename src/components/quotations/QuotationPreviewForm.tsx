@@ -122,21 +122,21 @@ export function QuotationPreviewForm({
           <div className="mt-4 text-center"><span className="inline-block rounded-lg border border-[#5270a9] bg-[#dbe4ff] px-6 py-1.5 text-xl font-bold shadow-sm">Quotation <span className="text-sm font-semibold">(ใบเสนอราคา)</span></span></div>
         </header>
 
-        <section className="grid gap-x-10 gap-y-4 border-b border-[#0f172a] py-4 sm:grid-cols-[1fr_300px]">
+        <section className="grid gap-x-8 gap-y-4 border-b border-[#0f172a] py-4 sm:grid-cols-[1fr_360px]">
           <div className="space-y-2">
-            <div className="grid grid-cols-[74px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">ลูกค้า</label><input name="customer_name" value={customerName} onChange={(event) => chooseCustomer(event.currentTarget.value)} list="preview-customer-options" className={`${fieldClass} font-bold`} placeholder="เลือกบริษัท / สาขาลูกค้า" /></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">ลูกค้า</label><input name="customer_name" value={customerName} onChange={(event) => chooseCustomer(event.currentTarget.value)} list="preview-customer-options" className={`${fieldClass} font-bold`} placeholder="เลือกบริษัท / สาขาลูกค้า" /></div>
             <datalist id="preview-customer-options">{customerOptions.map((name) => <option key={name} value={name} />)}</datalist>
-            <div className="grid grid-cols-[74px_1fr] items-end gap-2"><span /><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.address ?? "เลือกชื่อลูกค้าเพื่อดึงที่อยู่และเลขผู้เสียภาษี"}</p></div>
-            <div className="grid grid-cols-[74px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.taxId ?? ""}</p></div>
-            <div className="grid grid-cols-[74px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => setAttention(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.address ?? "เลือกชื่อลูกค้าเพื่อดึงที่อยู่และเลขผู้เสียภาษี"}</p></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.taxId ?? ""}</p></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => setAttention(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
             <datalist id="preview-contact-options">{contactOptions.map((contact) => <option key={contact} value={contact} />)}</datalist>
           </div>
 
           <div className="space-y-2 text-[#003b84]">
-            <div className="grid grid-cols-[118px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" defaultValue={quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate} className={fieldClass} placeholder="06/10/2569" /></div>
-            <div className="grid grid-cols-[118px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" defaultValue={quotation?.quotation_no ?? ""} className={`${fieldClass} font-bold`} placeholder="6909033" /></div></div>
-            <div className="grid grid-cols-[118px_1fr] items-end gap-2"><label className="font-bold">อ้างอิง BOQ :</label><input name="boq_no" defaultValue={quotation?.boq_no ?? ""} className={fieldClass} placeholder="6909011" /></div>
-            <div className="grid grid-cols-[118px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} placeholder="เครดิต 15 วัน" /></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" defaultValue={quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate} className={fieldClass} placeholder="06/10/2569" /></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" defaultValue={quotation?.quotation_no ?? ""} className={`${fieldClass} font-bold`} placeholder="6909033" /></div></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">อ้างอิง BOQ :</label><input name="boq_no" defaultValue={quotation?.boq_no ?? ""} className={fieldClass} placeholder="6909011" /></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} placeholder="เครดิต 15 วัน" /></div>
             <datalist id="preview-payment-options">{termOptions.map((term) => <option key={term} value={term} />)}</datalist>
           </div>
         </section>
