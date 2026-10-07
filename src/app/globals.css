@@ -84,7 +84,14 @@ a {
 .quotation-worksheet input,
 .quotation-worksheet textarea,
 .quotation-worksheet button {
-  font-family: "TH Sarabun New", Tahoma, sans-serif;
+  /* Main document cells in the supplied Excel template use Angsana New. */
+  font-family: "Angsana New", "TH Sarabun New", Tahoma, sans-serif;
+}
+
+/* The template uses Calibri for the contact line and approval/signature area. */
+.quotation-worksheet .worksheet-contact,
+.quotation-worksheet .worksheet-signature {
+  font-family: Calibri, Arial, sans-serif;
 }
 
 @keyframes route-enter {

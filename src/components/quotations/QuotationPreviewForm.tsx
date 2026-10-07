@@ -116,7 +116,7 @@ export function QuotationPreviewForm({
               <p className="mt-1 text-xs font-semibold">(สำนักงานใหญ่) เลขประจำตัวผู้เสียภาษี 0-1155-59027-64-1</p>
               <p className="text-lg font-bold tracking-wide">NTP ELECTRIC AND ENGINEERING CO., LTD.</p>
               <p className="mt-2 text-xs">107/83 หมู่ที่ 12 ตำบลบางปลา อำเภอบางพลี จังหวัดสมุทรปราการ 10540</p>
-              <p className="text-xs text-blue-700 underline">TEL:02-102-3363 FAX :081-375-2024 Email:ntpelectric2017@gmail.com</p>
+              <p className="worksheet-contact text-xs text-blue-700 underline">TEL:02-102-3363 FAX :081-375-2024 Email:ntpelectric2017@gmail.com</p>
             </div>
           </div>
           <div className="mt-4 text-center"><span className="inline-block rounded-lg border border-[#5270a9] bg-[#dbe4ff] px-6 py-1.5 text-xl font-bold shadow-sm">Quotation <span className="text-sm font-semibold">(ใบเสนอราคา)</span></span></div>
@@ -162,7 +162,7 @@ export function QuotationPreviewForm({
           <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" defaultValue={quotation?.email ?? ""} className="ml-2 h-7 w-52 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
         </section>
 
-        <footer className="mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-[18px] leading-tight">
+        <footer className="worksheet-signature mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-[18px] leading-tight">
           <div className="pl-[12%] text-left"><p>ผู้อนุมัติสั่งซื้อ..........................</p><p className="mt-3">วันที่........................................</p></div>
           <div className="text-center"><p>ผู้เสนอราคา</p><span className="inline-block pt-7">(นายณัฐพล ลุนะหา)</span><br /><span className="text-[16px]">T.081-3752024</span></div>
         </footer>
