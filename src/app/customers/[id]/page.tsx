@@ -20,11 +20,11 @@ import {
 
 import {
   CustomerQuotationFilters,
-} from "@/components/customers/CustomerQuotationFilters";
+} from "@/app/customers/CustomerQuotationFilters";
 
 import {
   CustomerQuotationTable,
-} from "@/components/customers/CustomerQuotationTable";
+} from "@/app/customers/CustomerQuotationTable";
 
 import {
   QuotationPagination,
