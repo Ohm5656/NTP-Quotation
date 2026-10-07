@@ -32,6 +32,10 @@ function asNumber(value: string): number {
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
+function conciseNumber(value: number): string {
+  return Number.isFinite(value) ? String(Number(value.toFixed(6))) : "";
+}
+
 function makeDraft(item?: QuotationLineItem, index = 0): DraftItem {
   return {
     key: item?.id ?? `new-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
@@ -64,7 +68,7 @@ export function QuotationLineItemsEditor({
   });
   const [remarks, setRemarks] = useState(initialRemarks ?? "");
   const [discount, setDiscount] = useState(numberText(initialDiscount ?? 0));
-  const [vatPercent, setVatPercent] = useState(String(Number(initialVatRate ?? 0.07) * 100));
+  const [vatPercent, setVatPercent] = useState(() => conciseNumber(Number(initialVatRate ?? 0.07) * 100));
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
@@ -149,7 +153,7 @@ export function QuotationLineItemsEditor({
 
       <div className="grid gap-0 lg:grid-cols-[1fr_330px]">
         <div className="border-x border-b border-[#1e293b] p-0">
-          <label htmlFor="remarks" className="flex min-h-[126px] cursor-text items-start gap-2 p-2 text-sm"><strong className="shrink-0 text-[#df001b]">หมายเหตุ</strong><textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.currentTarget.value)} rows={3} placeholder="เช่น ยืนราคา 30 วันนับจากวันเสนอราคา" className="min-h-[92px] w-full resize-y border-0 bg-transparent px-1 py-0 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
+          <label htmlFor="remarks" className="flex min-h-[126px] cursor-text items-start gap-2 p-2 text-sm"><strong className="shrink-0 text-[#df001b]">หมายเหตุ</strong><textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.currentTarget.value)} rows={3} className="min-h-[92px] w-full resize-y border-0 bg-transparent px-1 py-0 outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
         </div>
         <div className="border-r border-b border-[#1e293b] bg-white">
           <table className="w-full table-fixed border-collapse text-sm">
@@ -158,7 +162,7 @@ export function QuotationLineItemsEditor({
               <tr className="h-8 border-b border-[#1e293b]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left font-bold">Total</th><td className="px-3 text-right font-bold tabular-nums">{totals.subtotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
               <tr className="h-8 border-b border-[#1e293b]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left font-bold">DISCOUNT</th><td className="p-0"><input value={discount} onChange={(event) => setDiscount(event.currentTarget.value)} inputMode="decimal" placeholder="0.00" aria-label="Discount" className="h-8 w-full border-0 bg-transparent px-3 text-right font-normal outline-none tabular-nums hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td></tr>
               <tr className="h-8 border-b border-[#1e293b]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left font-bold">SUB TOTAL</th><td className="px-3 text-right font-bold tabular-nums">{Math.max(0, totals.subtotal - totals.discountAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
-              <tr className="h-8 border-b border-[#1e293b]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left font-bold">Vat <span className="float-right inline-flex items-center font-bold"><input value={vatPercent} onChange={(event) => setVatPercent(event.currentTarget.value)} onBlur={(event) => setVatPercent(String(Number(event.currentTarget.value) || 0))} inputMode="decimal" aria-label="VAT percentage" className="h-8 w-12 border-0 bg-transparent px-1 text-right font-bold outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" />%</span></th><td className="px-3 text-right font-bold tabular-nums">{totals.vat.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+              <tr className="h-8 border-b border-[#1e293b]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left font-bold">Vat <span className="float-right inline-flex items-center font-bold"><input value={vatPercent} onChange={(event) => setVatPercent(event.currentTarget.value)} onBlur={(event) => setVatPercent(conciseNumber(Number(event.currentTarget.value)))} inputMode="decimal" aria-label="VAT percentage" className="h-8 w-12 border-0 bg-transparent px-1 text-right font-bold outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" />%</span></th><td className="px-3 text-right font-bold tabular-nums">{totals.vat.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
               <tr className="h-8 bg-[#d8d8f7]"><th scope="row" className="border-r border-[#1e293b] px-3 text-left text-base font-bold">Grand Total</th><td className="bg-white px-3 text-right text-base font-bold tabular-nums">{totals.grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
             </tbody>
           </table>
