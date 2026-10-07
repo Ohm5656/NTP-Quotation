@@ -237,6 +237,62 @@ function parseAmount(
   );
 }
 
+type ParsedLineItem = {
+  line_no: number;
+  description: string;
+  unit_price: number | null;
+  quantity: number | null;
+  unit: string | null;
+  show_item_number: boolean;
+};
+
+function parseLineItems(formData: FormData): ParsedLineItem[] | null {
+  const raw = getString(formData, "line_items_json");
+  if (!raw) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+
+    return parsed.slice(0, 12).map((item, index) => {
+      if (!item || typeof item !== "object") throw new Error("Invalid line item");
+      const record = item as Record<string, unknown>;
+      const description = typeof record.description === "string" ? record.description.trim() : "";
+      if (!description) throw new Error("Missing description");
+
+      const amountValue = record.unit_price === null || record.unit_price === undefined ? "" : String(record.unit_price);
+      const quantityValue = record.quantity === null || record.quantity === undefined ? "" : String(record.quantity);
+      const unitPrice = parseAmount(amountValue);
+      const quantity = parseAmount(quantityValue);
+      if ((amountValue && unitPrice === null) || (quantityValue && quantity === null)) throw new Error("Invalid amount");
+
+      return {
+        line_no: index + 1,
+        description,
+        unit_price: unitPrice,
+        quantity,
+        unit: typeof record.unit === "string" && record.unit.trim() ? record.unit.trim() : null,
+        show_item_number: record.show_item_number !== false,
+      };
+    });
+  } catch {
+    return null;
+  }
+}
+
+function calculateQuotationTotal(
+  lineItems: ParsedLineItem[],
+  discountAmount: number,
+  vatRate: number,
+): number {
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + (item.unit_price ?? 0) * (item.quantity ?? 0),
+    0,
+  );
+  const beforeVat = Math.max(0, subtotal - discountAmount);
+  return Math.round((beforeVat + beforeVat * vatRate) * 100) / 100;
+}
+
 /* =========================================================
  * Customer
  * ======================================================= */
@@ -379,6 +435,10 @@ export async function createQuotation(
     );
 
   const paymentTerm = optionalString(formData, "payment_term");
+  const lineItems = parseLineItems(formData);
+  const remarks = optionalString(formData, "remarks");
+  const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
+  const vatRate = parseAmount(getString(formData, "vat_rate")) ?? 0.07;
 
   const fieldErrors:
     CreateQuotationState["fieldErrors"] =
@@ -418,7 +478,14 @@ export async function createQuotation(
       "กรุณากรอกชื่องาน";
   }
 
-  const totalAmount =
+  if (lineItems === null || lineItems.length === 0) {
+    return {
+      success: false,
+      error: "กรุณาเพิ่มรายละเอียดสินค้า หรือบริการอย่างน้อย 1 รายการ",
+    };
+  }
+
+  const enteredTotalAmount =
     parseAmount(
       totalAmountRaw,
     );
@@ -427,7 +494,7 @@ export async function createQuotation(
     fieldErrors.totalAmount =
       "กรุณากรอกมูลค่า";
   } else if (
-    totalAmount === null
+    enteredTotalAmount === null
   ) {
     fieldErrors.totalAmount =
       "มูลค่าไม่ถูกต้อง";
@@ -454,6 +521,8 @@ export async function createQuotation(
       fieldErrors,
     };
   }
+
+  const totalAmount = calculateQuotationTotal(lineItems, discountAmount, vatRate);
 
   /* =======================================================
    * Customer
@@ -553,6 +622,12 @@ export async function createQuotation(
 
         payment_term: paymentTerm,
 
+        remarks,
+
+        discount_amount: discountAmount,
+
+        vat_rate: vatRate,
+
         attention,
 
         email,
@@ -586,6 +661,18 @@ export async function createQuotation(
 
       error:
         `ไม่สามารถเพิ่มใบเสนอราคาได้: ${error.message}`,
+    };
+  }
+
+  const { error: lineItemsError } = await supabase
+    .from("quotation_line_items")
+    .insert(lineItems.map((item) => ({ ...item, quotation_id: createdQuotation.id })));
+
+  if (lineItemsError) {
+    await supabase.from("quotations").delete().eq("id", createdQuotation.id);
+    return {
+      success: false,
+      error: `ไม่สามารถบันทึกรายการสินค้าได้: ${lineItemsError.message}`,
     };
   }
 
@@ -651,6 +738,10 @@ export async function updateQuotation(
   const totalAmountRaw = getString(formData, "total_amount");
   const email = optionalString(formData, "email");
   const paymentTerm = optionalString(formData, "payment_term");
+  const lineItems = parseLineItems(formData);
+  const remarks = optionalString(formData, "remarks");
+  const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
+  const vatRate = parseAmount(getString(formData, "vat_rate")) ?? 0.07;
   const fieldErrors: CreateQuotationState["fieldErrors"] = {};
 
   const quotationDate = parseThaiDate(quotationDateRaw);
@@ -658,14 +749,22 @@ export async function updateQuotation(
     fieldErrors.quotationDate = "รูปแบบวันที่ไม่ถูกต้อง เช่น 06/10/2569";
   }
 
-  const totalAmount = parseAmount(totalAmountRaw);
-  if (totalAmountRaw && totalAmount === null) {
+  const enteredTotalAmount = parseAmount(totalAmountRaw);
+  if (totalAmountRaw && enteredTotalAmount === null) {
     fieldErrors.totalAmount = "มูลค่าไม่ถูกต้อง";
   }
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     fieldErrors.email = "รูปแบบ E-mail ไม่ถูกต้อง";
   }
+
+  if (lineItems === null) {
+    return { success: false, error: "ข้อมูลรายการสินค้าไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง" };
+  }
+
+  const totalAmount = lineItems.length
+    ? calculateQuotationTotal(lineItems, discountAmount, vatRate)
+    : enteredTotalAmount;
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
@@ -710,6 +809,9 @@ export async function updateQuotation(
       total_amount: totalAmount,
       po: optionalString(formData, "po"),
       payment_term: paymentTerm,
+      remarks,
+      discount_amount: discountAmount,
+      vat_rate: vatRate,
       attention: optionalString(formData, "attention"),
       email,
       updated_at: new Date().toISOString(),
@@ -731,6 +833,25 @@ export async function updateQuotation(
       success: false,
       error: "ไม่พบใบเสนอราคาที่ต้องการแก้ไข หรือรายการถูกลบไปแล้ว",
     };
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from("quotation_line_items")
+    .delete()
+    .eq("quotation_id", quotationId);
+
+  if (deleteItemsError) {
+    return { success: false, error: `ไม่สามารถอัปเดตรายการสินค้าได้: ${deleteItemsError.message}` };
+  }
+
+  if (lineItems.length) {
+    const { error: insertItemsError } = await supabase
+      .from("quotation_line_items")
+      .insert(lineItems.map((item) => ({ ...item, quotation_id: quotationId })));
+
+    if (insertItemsError) {
+      return { success: false, error: `ไม่สามารถบันทึกรายการสินค้าได้: ${insertItemsError.message}` };
+    }
   }
 
   revalidatePath("/");

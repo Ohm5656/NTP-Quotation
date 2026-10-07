@@ -30,6 +30,10 @@ import {
   formatThaiDate,
 } from "@/lib/format";
 
+import {
+  QuotationLineItemsEditor,
+} from "@/components/quotations/QuotationLineItemsEditor";
+
 import type {
   CustomerOption,
   QuotationListItem,
@@ -832,6 +836,22 @@ export function QuotationCreateForm({
           "
         />
 
+        <QuotationLineItemsEditor
+          initialItems={quotation?.quotation_line_items}
+          initialRemarks={quotation?.remarks}
+          initialDiscount={quotation?.discount_amount}
+          initialVatRate={quotation?.vat_rate}
+          initialTotal={quotation?.total_amount}
+          isNew={!quotation}
+        />
+
+        <div
+          className="
+            h-px
+            bg-[#eaecf0]
+          "
+        />
+
         {/* =================================================
          * Amount / PO
          * =============================================== */}
@@ -870,8 +890,8 @@ export function QuotationCreateForm({
               xl:grid-cols-3
             "
           >
-            {/* Amount */}
-            <div>
+            {/* Amount is calculated from quotation lines. */}
+            <div className="hidden">
               <label
                 htmlFor="total_amount"
                 className="

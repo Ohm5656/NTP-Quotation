@@ -5,6 +5,10 @@ import path from "node:path";
 
 import ExcelJS from "exceljs";
 
+import type {
+  QuotationLineItem,
+} from "@/types/database";
+
 import {
   defaultPaymentTerm,
   findCustomerProfile,
@@ -21,9 +25,13 @@ export type ExportQuotation = {
   total_amount: number | string | null;
   po: string | null;
   payment_term: string | null;
+  remarks?: string | null;
+  discount_amount?: number | string | null;
+  vat_rate?: number | string | null;
   attention: string | null;
   email: string | null;
   source_row?: number | null;
+  quotation_line_items?: QuotationLineItem[];
 };
 
 const TEMPLATE_DIR = path.join(process.cwd(), "templates", "excel");
@@ -80,6 +88,42 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   sheet.getCell("F12").value = quotation.boq_no ?? "";
   sheet.getCell("F13").value = paymentTerm;
   sheet.getCell("C15").value = quotation.project_name ?? "";
+
+  const lineItems = [...(quotation.quotation_line_items ?? [])]
+    .sort((a, b) => a.line_no - b.line_no)
+    .slice(0, 12);
+  let visibleNumber = 0;
+  for (let index = 0; index < 12; index += 1) {
+    const rowNumber = 18 + index;
+    const row = sheet.getRow(rowNumber);
+    for (let column = 2; column <= 7; column += 1) row.getCell(column).value = null;
+
+    const item = lineItems[index];
+    if (!item) continue;
+    if (item.show_item_number) visibleNumber += 1;
+    const price = Number(item.unit_price ?? 0);
+    const quantity = Number(item.quantity ?? 0);
+
+    row.getCell(2).value = item.show_item_number ? visibleNumber : "";
+    row.getCell(3).value = item.description;
+    row.getCell(4).value = item.unit_price === null ? "" : price;
+    row.getCell(5).value = item.quantity === null ? "" : quantity;
+    row.getCell(6).value = item.unit ?? "";
+    row.getCell(7).value = item.unit_price === null || item.quantity === null
+      ? ""
+      : { formula: `D${rowNumber}*E${rowNumber}`, result: price * quantity };
+  }
+
+  const discount = Number(quotation.discount_amount ?? 0);
+  const vatRate = Number(quotation.vat_rate ?? 0.07);
+  sheet.getCell("B30").value = quotation.remarks?.trim()
+    ? `หมายเหตุ  ${quotation.remarks.trim()}`
+    : "หมายเหตุ";
+  sheet.getCell("B31").value = paymentTerm
+    ? `เงื่อนไขการชำระเงิน : ${paymentTerm}`
+    : "เงื่อนไขการชำระเงิน :";
+  sheet.getCell("G31").value = discount;
+  sheet.getCell("E33").value = vatRate;
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

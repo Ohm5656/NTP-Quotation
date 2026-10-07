@@ -258,9 +258,21 @@ export async function getQuotations(
           total_amount,
           po,
           payment_term,
+          remarks,
+          discount_amount,
+          vat_rate,
           attention,
           email,
-          source_row
+          source_row,
+          quotation_line_items (
+            id,
+            line_no,
+            description,
+            unit_price,
+            quantity,
+            unit,
+            show_item_number
+          )
         `,
         {
           count: "exact",

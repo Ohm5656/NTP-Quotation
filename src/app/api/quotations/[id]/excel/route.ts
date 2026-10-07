@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   const { data, error } = await createAdminSupabaseClient()
     .from("quotations")
-    .select("id, quotation_no, quotation_date, boq_no, customer_name_raw, project_name, total_amount, po, payment_term, attention, email")
+    .select("id, quotation_no, quotation_date, boq_no, customer_name_raw, project_name, total_amount, po, payment_term, remarks, discount_amount, vat_rate, attention, email, quotation_line_items(id, line_no, description, unit_price, quantity, unit, show_item_number)")
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();

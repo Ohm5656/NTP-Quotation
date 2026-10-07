@@ -61,6 +61,20 @@ export type Quotation = {
     | string
     | null;
 
+  remarks:
+    | string
+    | null;
+
+  discount_amount:
+    | number
+    | string
+    | null;
+
+  vat_rate:
+    | number
+    | string
+    | null;
+
   attention:
     | string
     | null;
@@ -94,6 +108,16 @@ export type DashboardTotals = {
 export type CustomerOption = {
   id: string;
   name: string;
+};
+
+export type QuotationLineItem = {
+  id?: string;
+  line_no: number;
+  description: string;
+  unit_price: number | string | null;
+  quantity: number | string | null;
+  unit: string | null;
+  show_item_number: boolean;
 };
 
 export type QuotationListItem = {
@@ -136,6 +160,20 @@ export type QuotationListItem = {
     | string
     | null;
 
+  remarks:
+    | string
+    | null;
+
+  discount_amount:
+    | number
+    | string
+    | null;
+
+  vat_rate:
+    | number
+    | string
+    | null;
+
   attention:
     | string
     | null;
@@ -147,4 +185,6 @@ export type QuotationListItem = {
   source_row:
     | number
     | null;
+
+  quotation_line_items?: QuotationLineItem[];
 };
