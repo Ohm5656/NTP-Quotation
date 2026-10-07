@@ -99,28 +99,25 @@ export function EditQuotationButton({
             className="dialog-enter relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-2xl border border-white/20 bg-white shadow-[0_30px_80px_rgba(16,24,40,0.30)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#eaecf0] bg-white px-6 py-5">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#eaecf0] bg-white px-5 py-2.5">
               <div>
-                <div className="mb-1.5 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-[#17379c]">
+                <div className="mr-2 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-[#17379c]">
                   <span className="h-2 w-2 rounded-full bg-[#17379c]" />
-                  EDIT QUOTATION
+                  WORKSHEET
                 </div>
                 <h2
                   id={`edit-quotation-title-${quotation.id}`}
-                  className="text-xl font-bold text-[#172033]"
+                  className="inline text-sm font-bold text-[#172033]"
                 >
                   แก้ไขใบเสนอราคา
                 </h2>
-                <p className="mt-1 text-sm text-[#667085]">
-                  แก้ไขรายละเอียด หรือเพิ่มเลข PO แล้วบันทึกการเปลี่ยนแปลง
-                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="ปิด"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#667085] transition hover:bg-[#f2f4f7] hover:text-[#172033]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#667085] transition hover:bg-[#f2f4f7] hover:text-[#172033]"
               >
                 <X size={20} />
               </button>

@@ -78,7 +78,9 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   const [addressLineOne, addressLineTwo] = splitAddress(profile?.address ?? "");
   const paymentTerm = quotation.payment_term?.trim() || defaultPaymentTerm(profile?.paymentTerm);
 
-  sheet.getCell("C10").value = profile?.name ?? quotation.customer_name_raw ?? "";
+  // Keep the quotation's original display name (for example, an English legal name)
+  // while still using the linked profile for address and tax data.
+  sheet.getCell("C10").value = quotation.customer_name_raw ?? profile?.name ?? "";
   sheet.getCell("C11").value = addressLineOne;
   sheet.getCell("C12").value = addressLineTwo;
   sheet.getCell("C13").value = profile?.taxId ? `เลขประจำตัวผู้เสียภาษี : ${profile.taxId}` : "เลขประจำตัวผู้เสียภาษี :";

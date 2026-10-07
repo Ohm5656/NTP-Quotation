@@ -231,20 +231,20 @@ export function CreateQuotationModal({
               className="
                 flex
                 shrink-0
-                items-start
+                items-center
                 justify-between
                 gap-4
                 border-b
                 border-[#eaecf0]
                 bg-white
-                px-6
-                py-5
+                px-5
+                py-2.5
               "
             >
               <div>
                 <div
                   className="
-                    mb-1.5
+                    mr-2
                     inline-flex
                     items-center
                     gap-2
@@ -263,13 +263,14 @@ export function CreateQuotationModal({
                     "
                   />
 
-                  NEW QUOTATION
+                  WORKSHEET
                 </div>
 
                 <h2
                   id="create-quotation-title"
                   className="
-                    text-xl
+                    inline
+                    text-sm
                     font-bold
                     text-[#172033]
                   "
@@ -277,15 +278,6 @@ export function CreateQuotationModal({
                   เพิ่มใบเสนอราคา
                 </h2>
 
-                <p
-                  className="
-                    mt-1
-                    text-sm
-                    text-[#667085]
-                  "
-                >
-                  เพิ่มข้อมูลใหม่เข้าสู่ระบบใบเสนอราคาของบริษัท
-                </p>
               </div>
 
               {/* ปุ่ม X */}
@@ -302,7 +294,7 @@ export function CreateQuotationModal({
                   shrink-0
                   items-center
                   justify-center
-                  rounded-lg
+                  rounded-md
                   text-[#667085]
                   transition
                   hover:bg-[#f2f4f7]

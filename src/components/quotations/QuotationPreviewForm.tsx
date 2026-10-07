@@ -93,19 +93,23 @@ export function QuotationPreviewForm({
     if (!paymentTerm.trim() && profile.paymentTerm) setPaymentTerm(paymentText(profile.paymentTerm));
   }
 
-  const fieldClass = "h-7 w-full border-0 border-b border-dotted border-[#5270a9] bg-transparent px-1 text-[13px] text-[#111827] outline-none focus:border-solid focus:border-[#17379c]";
+  const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[13px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
 
   return (
-    <form action={formAction} className="min-h-0 overflow-y-auto bg-[#6b7280]/20 p-3 sm:p-6">
+    <form action={formAction} className="min-h-0 overflow-y-auto bg-[#667085]/20 p-3 sm:p-6">
       {state.error && (
-        <div className="mx-auto mb-3 max-w-[980px] border border-[#f1b7be] bg-[#fff4f5] px-4 py-3 text-sm font-medium text-[#b80017]">
+        <div className="mx-auto mb-3 max-w-[1120px] border border-[#f1b7be] bg-[#fff4f5] px-4 py-3 text-sm font-medium text-[#b80017]">
           {state.error}
         </div>
       )}
 
-      <article className="mx-auto w-full max-w-[980px] bg-white px-5 py-5 font-serif text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-8 sm:py-7">
-        <header className="border-b border-[#0f172a] pb-4">
-          <div className="grid gap-3 sm:grid-cols-[150px_1fr] sm:items-center">
+      <article className="mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 font-serif text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
+        <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-[11px] text-[#667085]">
+          <span>QUOTATION WORKSHEET</span>
+          <span className="hidden sm:inline">ช่องสีครีมคือช่องที่กรอกได้ · กด Tab เพื่อเลื่อนไปช่องถัดไป</span>
+        </div>
+        <header className="border-b border-[#0f172a] pb-3">
+          <div className="grid gap-2 sm:grid-cols-[180px_1fr] sm:items-center">
             <div className="flex justify-center"><img src="/ntp-logo.png" alt="NTP" className="h-[106px] w-auto object-contain" /></div>
             <div className="text-center sm:text-left">
               <p className="text-xl font-bold leading-tight sm:text-2xl">บริษัท เอ็นทีพี อิเล็คทริคแอนด์เอ็นจิเนียริ่ง จำกัด</p>
@@ -118,7 +122,7 @@ export function QuotationPreviewForm({
           <div className="mt-4 text-center"><span className="inline-block rounded-lg border border-[#5270a9] bg-[#dbe4ff] px-6 py-1.5 text-xl font-bold shadow-sm">Quotation <span className="text-sm font-semibold">(ใบเสนอราคา)</span></span></div>
         </header>
 
-        <section className="grid gap-x-10 gap-y-4 border-b border-[#0f172a] py-5 sm:grid-cols-[1fr_270px]">
+        <section className="grid gap-x-10 gap-y-4 border-b border-[#0f172a] py-4 sm:grid-cols-[1fr_300px]">
           <div className="space-y-2">
             <div className="grid grid-cols-[74px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">ลูกค้า</label><input name="customer_name" value={customerName} onChange={(event) => chooseCustomer(event.currentTarget.value)} list="preview-customer-options" className={`${fieldClass} font-bold`} placeholder="เลือกบริษัท / สาขาลูกค้า" /></div>
             <datalist id="preview-customer-options">{customerOptions.map((name) => <option key={name} value={name} />)}</datalist>
@@ -137,7 +141,7 @@ export function QuotationPreviewForm({
           </div>
         </section>
 
-        <section className="border-b border-[#0f172a] py-3">
+        <section className="border-b border-[#0f172a] py-2">
           <div className="grid grid-cols-[70px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">Project :</label><input name="project_name" defaultValue={quotation?.project_name ?? ""} className={`${fieldClass} font-bold`} placeholder="ชื่อโปรเจกต์ — รายละเอียดงานให้ใส่ในตารางด้านล่าง" /></div>
           <p className="mt-2 pl-[70px] text-xs">บริษัทมีความยินดีที่จะเสนอราคาสินค้า ดังต่อไปนี้ :</p>
         </section>
@@ -154,8 +158,8 @@ export function QuotationPreviewForm({
         </section>
 
         <section className="mt-4 grid gap-3 border-t border-[#0f172a] pt-3 sm:grid-cols-2">
-          <label className="text-xs text-[#344054]">PO (ข้อมูลอ้างอิงภายใน)<input name="po" defaultValue={quotation?.po ?? ""} className="ml-2 h-7 w-44 border-b border-dotted border-[#98a2b3] px-1 outline-none focus:border-[#17379c]" /></label>
-          <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" defaultValue={quotation?.email ?? ""} className="ml-2 h-7 w-52 border-b border-dotted border-[#98a2b3] px-1 outline-none focus:border-[#17379c]" /></label>
+          <label className="text-xs text-[#344054]">PO (ข้อมูลอ้างอิงภายใน)<input name="po" defaultValue={quotation?.po ?? ""} className="ml-2 h-7 w-44 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
+          <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" defaultValue={quotation?.email ?? ""} className="ml-2 h-7 w-52 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
         </section>
 
         <footer className="mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-center text-sm">
@@ -164,7 +168,7 @@ export function QuotationPreviewForm({
         </footer>
       </article>
 
-      <div className="mx-auto flex w-full max-w-[980px] flex-col-reverse justify-between gap-3 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(16,24,40,0.18)] sm:flex-row sm:items-center">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col-reverse justify-between gap-3 border border-t-0 border-[#111827] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(16,24,40,0.18)] sm:flex-row sm:items-center">
         <button type="button" onClick={onCancel} disabled={pending} className="inline-flex h-11 items-center justify-center gap-2 border border-[#d0d5dd] px-4 text-sm font-semibold text-[#475467] transition hover:bg-[#f8f9fc] disabled:opacity-50"><X size={17} />ยกเลิก</button>
         <button type="submit" disabled={pending} className="inline-flex h-11 items-center justify-center gap-2 bg-[#17379c] px-6 text-sm font-semibold text-white transition hover:bg-[#10266f] disabled:opacity-60"><Save size={17} />{pending ? "กำลังบันทึก..." : isEditing ? "บันทึกการแก้ไข" : "บันทึกใบเสนอราคา"}</button>
       </div>
