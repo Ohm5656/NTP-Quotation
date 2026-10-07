@@ -93,7 +93,7 @@ export function QuotationPreviewForm({
     if (!paymentTerm.trim() && profile.paymentTerm) setPaymentTerm(paymentText(profile.paymentTerm));
   }
 
-  const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[18px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
+  const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[28px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
 
   return (
     <form action={formAction} className="min-h-0 overflow-y-auto bg-[#667085]/20 p-3 sm:p-6">
@@ -106,7 +106,6 @@ export function QuotationPreviewForm({
       <article className="quotation-worksheet mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
         <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-xs text-[#667085]">
           <span>QUOTATION WORKSHEET</span>
-          <span className="hidden sm:inline">ช่องสีครีมคือช่องที่กรอกได้ · กด Tab เพื่อเลื่อนไปช่องถัดไป</span>
         </div>
         <header className="border-b border-[#0f172a] pb-3">
           <div className="grid gap-2 sm:grid-cols-[180px_1fr] sm:items-center">
@@ -126,8 +125,8 @@ export function QuotationPreviewForm({
           <div className="space-y-2">
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">ลูกค้า</label><input name="customer_name" value={customerName} onChange={(event) => chooseCustomer(event.currentTarget.value)} list="preview-customer-options" className={`${fieldClass} font-bold`} placeholder="เลือกบริษัท / สาขาลูกค้า" /></div>
             <datalist id="preview-customer-options">{customerOptions.map((name) => <option key={name} value={name} />)}</datalist>
-            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.address ?? "เลือกชื่อลูกค้าเพื่อดึงที่อยู่และเลขผู้เสียภาษี"}</p></div>
-            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-[13px]">{customerProfile?.taxId ?? ""}</p></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-sm">{customerProfile?.address ?? "เลือกชื่อลูกค้าเพื่อดึงที่อยู่และเลขผู้เสียภาษี"}</p></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-xs">{customerProfile?.taxId ?? ""}</p></div>
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => setAttention(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
             <datalist id="preview-contact-options">{contactOptions.map((contact) => <option key={contact} value={contact} />)}</datalist>
           </div>
