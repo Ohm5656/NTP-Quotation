@@ -104,7 +104,7 @@ export function QuotationPreviewForm({
       )}
 
       <article className="quotation-worksheet mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
-        <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-[11px] text-[#667085]">
+        <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-xs text-[#667085]">
           <span>QUOTATION WORKSHEET</span>
           <span className="hidden sm:inline">ช่องสีครีมคือช่องที่กรอกได้ · กด Tab เพื่อเลื่อนไปช่องถัดไป</span>
         </div>
