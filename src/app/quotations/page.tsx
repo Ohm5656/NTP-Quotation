@@ -1,8 +1,14 @@
 import {
   getAvailableQuotationYears,
+  getContactOptions,
   getCustomerOptions,
+  getPaymentTermOptions,
   getQuotations,
 } from "@/lib/queries/quotations";
+
+import {
+  getCustomerProfiles,
+} from "@/lib/excel/customer-profiles";
 
 import {
   QuotationFilters,
@@ -19,6 +25,10 @@ import {
 import {
   CreateQuotationModal,
 } from "@/components/quotations/CreateQuotationModal";
+
+import {
+  DownloadAllQuotationsButton,
+} from "@/components/quotations/DownloadButtons";
 
 type PageProps = {
   searchParams: Promise<{
@@ -147,6 +157,9 @@ export default async function QuotationsPage({
     result,
     customers,
     years,
+    customerProfiles,
+    paymentTerms,
+    contacts,
   ] =
     await Promise.all([
       getQuotations({
@@ -160,6 +173,12 @@ export default async function QuotationsPage({
       getCustomerOptions(),
 
       getAvailableQuotationYears(),
+
+      getCustomerProfiles(),
+
+      getPaymentTermOptions(),
+
+      getContactOptions(),
     ]);
 
   const defaultDate =
@@ -272,14 +291,16 @@ export default async function QuotationsPage({
         {/* =================================================
          * Modal Trigger
          * =============================================== */}
-        <CreateQuotationModal
-          customers={
-            customers
-          }
-          defaultDate={
-            defaultDate
-          }
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <DownloadAllQuotationsButton />
+          <CreateQuotationModal
+            customers={customers}
+            customerProfiles={customerProfiles}
+            paymentTerms={paymentTerms}
+            contacts={contacts}
+            defaultDate={defaultDate}
+          />
+        </div>
       </div>
 
       {/* =====================================================
@@ -385,6 +406,9 @@ export default async function QuotationsPage({
         customers={
           customers
         }
+        customerProfiles={customerProfiles}
+        paymentTerms={paymentTerms}
+        contacts={contacts}
       />
 
       {/* =====================================================

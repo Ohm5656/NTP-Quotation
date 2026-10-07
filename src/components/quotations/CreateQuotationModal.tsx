@@ -27,11 +27,24 @@ type Props = {
   customers:
     CustomerOption[];
 
+  customerProfiles?: Array<{
+    name: string;
+    contact: string;
+    paymentTerm: string;
+  }>;
+
+  paymentTerms?: string[];
+
+  contacts?: string[];
+
   defaultDate: string;
 };
 
 export function CreateQuotationModal({
   customers,
+  customerProfiles = [],
+  paymentTerms = [],
+  contacts = [],
   defaultDate,
 }: Props) {
   const [
@@ -309,6 +322,9 @@ export function CreateQuotationModal({
               customers={
                 customers
               }
+              customerProfiles={customerProfiles}
+              paymentTerms={paymentTerms}
+              contacts={contacts}
               defaultDate={
                 defaultDate
               }

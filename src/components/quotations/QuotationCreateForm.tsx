@@ -39,6 +39,16 @@ type Props = {
   customers:
     CustomerOption[];
 
+  customerProfiles?: Array<{
+    name: string;
+    contact: string;
+    paymentTerm: string;
+  }>;
+
+  paymentTerms?: string[];
+
+  contacts?: string[];
+
   defaultDate: string;
 
   quotation?: QuotationListItem;
@@ -86,6 +96,9 @@ function FieldError({
 
 export function QuotationCreateForm({
   customers,
+  customerProfiles = [],
+  paymentTerms = [],
+  contacts = [],
   defaultDate,
   quotation,
   mode = "page",
@@ -112,6 +125,36 @@ export function QuotationCreateForm({
   );
 
   const isEditing = Boolean(quotation);
+
+  const paymentTermOptions = Array.from(new Set([
+    "เครดิต 0 วัน",
+    "เครดิต 15 วัน",
+    "เครดิต 30 วัน",
+    ...paymentTerms,
+    ...customerProfiles.map((profile) => {
+      const value = profile.paymentTerm.trim();
+      return value && !/วัน|เครดิต|ชำระ/i.test(value) ? `เครดิต ${value} วัน` : value;
+    }),
+  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th"));
+
+  const contactOptions = Array.from(new Set([
+    ...contacts,
+    ...customerProfiles.map((profile) => profile.contact.trim()),
+  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th"));
+
+  function applyCustomerProfile(customerName: string) {
+    const profile = customerProfiles.find((item) => item.name === customerName);
+    if (!profile) return;
+
+    const attention = document.getElementById("attention") as HTMLInputElement | null;
+    const paymentTerm = document.getElementById("payment_term") as HTMLInputElement | null;
+    if (attention && !attention.value.trim() && profile.contact) attention.value = profile.contact;
+    if (paymentTerm && !paymentTerm.value.trim() && profile.paymentTerm) {
+      paymentTerm.value = /วัน|เครดิต|ชำระ/i.test(profile.paymentTerm)
+        ? profile.paymentTerm
+        : `เครดิต ${profile.paymentTerm} วัน`;
+    }
+  }
 
   /*
    * หลังบันทึกสำเร็จ
@@ -658,6 +701,7 @@ export function QuotationCreateForm({
                 name="customer_name"
                 type="text"
                 list="customer-options"
+                onChange={(event) => applyCustomerProfile(event.currentTarget.value)}
                 defaultValue={
                   quotation?.customer_name_raw ??
                   ""
@@ -699,6 +743,9 @@ export function QuotationCreateForm({
                     />
                   ),
                 )}
+                {customerProfiles.map((profile) => (
+                  <option key={`profile-${profile.name}`} value={profile.name} />
+                ))}
               </datalist>
 
               <p
@@ -820,6 +867,7 @@ export function QuotationCreateForm({
               grid
               gap-5
               md:grid-cols-2
+              xl:grid-cols-3
             "
           >
             {/* Amount */}
@@ -959,6 +1007,36 @@ export function QuotationCreateForm({
                 "
               />
             </div>
+
+            <div>
+              <label
+                htmlFor="payment_term"
+                className="mb-2 block text-sm font-semibold text-[#344054]"
+              >
+                เงื่อนไขชำระเงิน
+              </label>
+
+              <input
+                id="payment_term"
+                name="payment_term"
+                type="text"
+                list="payment-term-options"
+                defaultValue={quotation?.payment_term ?? ""}
+                placeholder="เช่น เครดิต 15 วัน"
+                autoComplete="off"
+                className="h-11 w-full rounded-lg border border-[#d0d5dd] bg-white px-3 text-sm text-[#172033] outline-none transition focus:border-[#17379c] focus:ring-2 focus:ring-[#17379c]/10"
+              />
+
+              <datalist id="payment-term-options">
+                {paymentTermOptions.map((term) => (
+                  <option key={term} value={term} />
+                ))}
+              </datalist>
+
+              <p className="mt-1.5 text-[11px] text-[#98a2b3]">
+                พิมพ์ใหม่ได้ และระบบจะจำไว้ให้เลือกครั้งต่อไป
+              </p>
+            </div>
           </div>
         </section>
 
@@ -1038,6 +1116,7 @@ export function QuotationCreateForm({
                   id="attention"
                   name="attention"
                   type="text"
+                  list="contact-options"
                   defaultValue={
                     quotation?.attention ??
                     ""
@@ -1063,6 +1142,11 @@ export function QuotationCreateForm({
                   "
                 />
               </div>
+              <datalist id="contact-options">
+                {contactOptions.map((contact) => (
+                  <option key={contact} value={contact} />
+                ))}
+              </datalist>
             </div>
 
             {/* Email */}

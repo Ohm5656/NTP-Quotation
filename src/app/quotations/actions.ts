@@ -378,6 +378,8 @@ export async function createQuotation(
       "email",
     );
 
+  const paymentTerm = optionalString(formData, "payment_term");
+
   const fieldErrors:
     CreateQuotationState["fieldErrors"] =
       {};
@@ -549,6 +551,8 @@ export async function createQuotation(
 
         po,
 
+        payment_term: paymentTerm,
+
         attention,
 
         email,
@@ -646,6 +650,7 @@ export async function updateQuotation(
   const projectName = getString(formData, "project_name");
   const totalAmountRaw = getString(formData, "total_amount");
   const email = optionalString(formData, "email");
+  const paymentTerm = optionalString(formData, "payment_term");
   const fieldErrors: CreateQuotationState["fieldErrors"] = {};
 
   const quotationDate = parseThaiDate(quotationDateRaw);
@@ -704,6 +709,7 @@ export async function updateQuotation(
       project_name: projectName || null,
       total_amount: totalAmount,
       po: optionalString(formData, "po"),
+      payment_term: paymentTerm,
       attention: optionalString(formData, "attention"),
       email,
       updated_at: new Date().toISOString(),

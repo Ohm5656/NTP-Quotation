@@ -18,6 +18,10 @@ import {
   EditQuotationButton,
 } from "@/components/quotations/EditQuotationButton";
 
+import {
+  DownloadQuotationButton,
+} from "@/components/quotations/DownloadButtons";
+
 import type {
   CustomerOption,
 } from "@/types/database";
@@ -28,11 +32,20 @@ type Props = {
 
   customers?:
     CustomerOption[];
+
+  customerProfiles?: Array<{ name: string; contact: string; paymentTerm: string }>;
+
+  paymentTerms?: string[];
+
+  contacts?: string[];
 };
 
 export function QuotationTable({
   quotations,
   customers = [],
+  customerProfiles = [],
+  paymentTerms = [],
+  contacts = [],
 }: Props) {
   if (
     quotations.length ===
@@ -121,7 +134,7 @@ export function QuotationTable({
 
               <th
                 className="
-                  w-[112px]
+                  w-[144px]
                   px-4
                   py-3
                   text-center
@@ -304,6 +317,14 @@ export function QuotationTable({
                       <EditQuotationButton
                         quotation={quotation}
                         customers={customers}
+                        customerProfiles={customerProfiles}
+                        paymentTerms={paymentTerms}
+                        contacts={contacts}
+                      />
+
+                      <DownloadQuotationButton
+                        id={quotation.id}
+                        quotationNo={quotation.quotation_no}
                       />
 
                       <DeleteQuotationButton

@@ -257,6 +257,7 @@ export async function getQuotations(
           project_name,
           total_amount,
           po,
+          payment_term,
           attention,
           email,
           source_row
@@ -515,6 +516,62 @@ export async function getCustomerOptions(): Promise<
       FETCH_BATCH_SIZE
     ) {
       return customers;
+    }
+  }
+}
+
+export async function getPaymentTermOptions(): Promise<string[]> {
+  const supabase = createAdminSupabaseClient();
+  const terms = new Set<string>();
+
+  for (let from = 0; ; from += FETCH_BATCH_SIZE) {
+    const { data, error } = await supabase
+      .from("quotations")
+      .select("payment_term")
+      .is("deleted_at", null)
+      .not("payment_term", "is", null)
+      .range(from, from + FETCH_BATCH_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Unable to load payment terms: ${error.message}`);
+    }
+
+    const batch = data ?? [];
+    for (const row of batch) {
+      const term = typeof row.payment_term === "string" ? row.payment_term.trim() : "";
+      if (term) terms.add(term);
+    }
+
+    if (batch.length < FETCH_BATCH_SIZE) {
+      return [...terms].sort((a, b) => a.localeCompare(b, "th"));
+    }
+  }
+}
+
+export async function getContactOptions(): Promise<string[]> {
+  const supabase = createAdminSupabaseClient();
+  const contacts = new Set<string>();
+
+  for (let from = 0; ; from += FETCH_BATCH_SIZE) {
+    const { data, error } = await supabase
+      .from("quotations")
+      .select("attention")
+      .is("deleted_at", null)
+      .not("attention", "is", null)
+      .range(from, from + FETCH_BATCH_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Unable to load contacts: ${error.message}`);
+    }
+
+    const batch = data ?? [];
+    for (const row of batch) {
+      const contact = typeof row.attention === "string" ? row.attention.trim() : "";
+      if (contact) contacts.add(contact);
+    }
+
+    if (batch.length < FETCH_BATCH_SIZE) {
+      return [...contacts].sort((a, b) => a.localeCompare(b, "th"));
     }
   }
 }

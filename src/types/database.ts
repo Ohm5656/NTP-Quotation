@@ -57,6 +57,10 @@ export type Quotation = {
     | string
     | null;
 
+  payment_term:
+    | string
+    | null;
+
   attention:
     | string
     | null;
@@ -125,6 +129,10 @@ export type QuotationListItem = {
     | null;
 
   po:
+    | string
+    | null;
+
+  payment_term:
     | string
     | null;
 

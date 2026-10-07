@@ -26,11 +26,17 @@ import type {
 type Props = {
   quotation: QuotationListItem;
   customers: CustomerOption[];
+  customerProfiles?: Array<{ name: string; contact: string; paymentTerm: string }>;
+  paymentTerms?: string[];
+  contacts?: string[];
 };
 
 export function EditQuotationButton({
   quotation,
   customers,
+  customerProfiles = [],
+  paymentTerms = [],
+  contacts = [],
 }: Props) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -123,6 +129,9 @@ export function EditQuotationButton({
             <QuotationCreateForm
               key={quotation.id}
               customers={customers}
+              customerProfiles={customerProfiles}
+              paymentTerms={paymentTerms}
+              contacts={contacts}
               defaultDate=""
               quotation={quotation}
               mode="modal"
