@@ -5,6 +5,11 @@ import path from "node:path";
 
 import ExcelJS from "exceljs";
 
+import {
+  findLinkedCustomerProfile,
+  normalizeCustomerProfileKey,
+} from "@/lib/customer-profile-links";
+
 export type CustomerProfile = {
   name: string;
   taxId: string;
@@ -21,11 +26,7 @@ const PROFILE_PATH = path.join(
 );
 
 export function normalizeCustomerName(value: string | null | undefined): string {
-  return (value ?? "")
-    .toLocaleLowerCase("th")
-    .replace(/[.(),]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeCustomerProfileKey(value);
 }
 
 function cellText(value: ExcelJS.CellValue): string {
@@ -61,9 +62,7 @@ export function findCustomerProfile(
   profiles: CustomerProfile[],
   customerName: string | null | undefined,
 ): CustomerProfile | undefined {
-  const normalized = normalizeCustomerName(customerName);
-  if (!normalized) return undefined;
-  return profiles.find((profile) => normalizeCustomerName(profile.name) === normalized);
+  return findLinkedCustomerProfile(profiles, customerName);
 }
 
 export function defaultPaymentTerm(value: string | null | undefined): string {

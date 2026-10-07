@@ -10,6 +10,7 @@ import {
   updateQuotation,
 } from "@/app/quotations/actions";
 import { QuotationLineItemsEditor } from "@/components/quotations/QuotationLineItemsEditor";
+import { findLinkedCustomerProfile } from "@/lib/customer-profile-links";
 import { formatThaiDate } from "@/lib/format";
 import type { CustomerOption, QuotationListItem } from "@/types/database";
 
@@ -62,7 +63,7 @@ export function QuotationPreviewForm({
   );
 
   const customerProfile = useMemo(
-    () => customerProfiles.find((profile) => profile.name === customerName),
+    () => findLinkedCustomerProfile(customerProfiles, customerName),
     [customerName, customerProfiles],
   );
   const customerOptions = useMemo(
@@ -86,7 +87,7 @@ export function QuotationPreviewForm({
 
   function chooseCustomer(name: string) {
     setCustomerName(name);
-    const profile = customerProfiles.find((item) => item.name === name);
+    const profile = findLinkedCustomerProfile(customerProfiles, name);
     if (!profile) return;
     if (!attention.trim() && profile.contact) setAttention(profile.contact);
     if (!paymentTerm.trim() && profile.paymentTerm) setPaymentTerm(paymentText(profile.paymentTerm));

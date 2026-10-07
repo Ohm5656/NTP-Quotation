@@ -31,6 +31,10 @@ import {
 } from "@/lib/format";
 
 import {
+  findLinkedCustomerProfile,
+} from "@/lib/customer-profile-links";
+
+import {
   QuotationLineItemsEditor,
 } from "@/components/quotations/QuotationLineItemsEditor";
 
@@ -147,7 +151,7 @@ export function QuotationCreateForm({
   ].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th"));
 
   function applyCustomerProfile(customerName: string) {
-    const profile = customerProfiles.find((item) => item.name === customerName);
+    const profile = findLinkedCustomerProfile(customerProfiles, customerName);
     if (!profile) return;
 
     const attention = document.getElementById("attention") as HTMLInputElement | null;
