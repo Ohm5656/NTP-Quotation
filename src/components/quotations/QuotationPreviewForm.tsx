@@ -41,19 +41,6 @@ function paymentText(value: string): string {
   return /วัน|เครดิต|ชำระ/i.test(value) ? value : `เครดิต ${value} วัน`;
 }
 
-function splitQuotationNumber(value?: string | null): {
-  number: string;
-  isRevision: boolean;
-} {
-  const cleaned = (value ?? "").trim().replace(/^Q\s*/i, "");
-  const isRevision = /R$/i.test(cleaned);
-
-  return {
-    number: isRevision ? cleaned.slice(0, -1) : cleaned,
-    isRevision,
-  };
-}
-
 export function QuotationPreviewForm({
   customers,
   customerProfiles = [],
@@ -70,8 +57,7 @@ export function QuotationPreviewForm({
   const [customerName, setCustomerName] = useState(quotation?.customer_name_raw ?? "");
   const [attention, setAttention] = useState(quotation?.attention ?? "");
   const [paymentTerm, setPaymentTerm] = useState(quotation?.payment_term ?? "");
-  const [quotationNo, setQuotationNo] = useState(() => splitQuotationNumber(quotation?.quotation_no ?? suggestedQuotationNo));
-  const [isRevision, setIsRevision] = useState(() => splitQuotationNumber(quotation?.quotation_no ?? suggestedQuotationNo).isRevision);
+  const [quotationNo, setQuotationNo] = useState((quotation?.quotation_no ?? suggestedQuotationNo ?? "").replace(/^Q\s*/i, ""));
   const [state, formAction, pending] = useActionState(
     quotation
       ? updateQuotation.bind(null, quotation.id, quotation.customer_id)
@@ -108,8 +94,6 @@ export function QuotationPreviewForm({
     if (!profile) return;
     if (!attention.trim() && profile.contact) setAttention(profile.contact);
   }
-
-  const quotationNumberForSave = `${quotationNo.number}${isRevision ? "R" : ""}`;
 
   const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[28px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
 
@@ -151,7 +135,7 @@ export function QuotationPreviewForm({
 
           <div className="space-y-2 text-[#003b84]">
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" defaultValue={quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate} className={fieldClass} placeholder="06/10/2569" /></div>
-            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="grid grid-cols-[1fr_auto] items-end gap-3"><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input type="hidden" name="quotation_no" value={quotationNumberForSave} /><input value={quotationNo.number} onChange={(event) => setQuotationNo({ number: event.currentTarget.value.replace(/\D/g, ""), isRevision: false })} inputMode="numeric" className={`${fieldClass} font-bold`} aria-label="Quotation number" /></div><label className="flex h-8 items-center gap-2 whitespace-nowrap text-xs font-bold text-[#003b84]"><input type="checkbox" checked={isRevision} onChange={(event) => setIsRevision(event.currentTarget.checked)} className="!h-5 !min-h-0 !w-5 accent-[#003b84]" />Revision (R)</label></div></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" value={quotationNo} onChange={(event) => setQuotationNo(event.currentTarget.value.replace(/^Q\s*/i, ""))} className={`${fieldClass} font-bold`} aria-label="Quotation number" /></div></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">อ้างอิง BOQ :</label><div className="flex items-end"><span className="pb-1 font-bold">BOQ</span><input name="boq_no" defaultValue={quotation?.boq_no ?? ""} className={fieldClass} aria-label="BOQ number" /></div></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} placeholder="เครดิต 15 วัน" /></div>
             <datalist id="preview-payment-options">{termOptions.map((term) => <option key={term} value={term} />)}</datalist>

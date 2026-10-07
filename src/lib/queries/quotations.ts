@@ -471,8 +471,8 @@ export async function getQuotations(
  * Returns the next quotation number for a Thai calendar date.
  *
  * Number format: YYMMNNN, for example the first quotation in September
- * 2569 is 6909001. Revision suffixes (R) deliberately share the same
- * running number and never consume the next number.
+ * 2569 is 6909001. Manual suffixes such as r1, r2, and r3 deliberately
+ * share the same running number and never consume the next number.
  */
 export async function getNextQuotationNumber(
   thaiDate: string,
@@ -534,7 +534,7 @@ export async function getNextQuotationNumber(
     }
 
     const batch = data ?? [];
-    const numberPattern = new RegExp(`^${prefix}(\\d{3})(?:R)?$`, "i");
+    const numberPattern = new RegExp(`^${prefix}(\\d{3})(?:R\\d*)?$`, "i");
 
     for (const quotation of batch) {
       const match = quotation.quotation_no?.trim().match(numberPattern);
