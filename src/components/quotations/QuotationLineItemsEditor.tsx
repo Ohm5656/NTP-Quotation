@@ -40,6 +40,19 @@ function conciseNumber(value: number): string {
   return Number.isFinite(value) ? String(Number(value.toFixed(6))) : "";
 }
 
+function formatPrice(value: string): string {
+  const normalized = value.replace(/,/g, "").trim();
+  if (!normalized) return "";
+
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount)) return value;
+
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function makeDraft(item?: QuotationLineItem, index = 0): DraftItem {
   return {
     key: item?.id ?? `new-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
@@ -75,6 +88,7 @@ export function QuotationLineItemsEditor({
   const [discount, setDiscount] = useState(numberText(initialDiscount ?? 0));
   const [vatPercent, setVatPercent] = useState(() => conciseNumber(Number(initialVatRate ?? 0.07) * 100));
   const [lastProjectDescription, setLastProjectDescription] = useState(projectName.trim());
+  const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
 
   useEffect(() => {
     const nextProjectDescription = projectName.trim();
@@ -125,10 +139,31 @@ export function QuotationLineItemsEditor({
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
   }
 
-  function addItem() {
-    setItems((current) => current.length >= MAX_LINE_COUNT
-      ? current
-      : [...current, { ...makeDraft(undefined, current.length), showItemNumber: true }]);
+  function addItem(showItemNumber: boolean) {
+    setItems((current) => {
+      if (current.length >= MAX_LINE_COUNT) return current;
+
+      const activeIndex = activeItemKey
+        ? current.findIndex((item) => item.key === activeItemKey)
+        : -1;
+      const lastFilledIndex = current.reduce(
+        (lastIndex, item, index) => item.description.trim() ? index : lastIndex,
+        -1,
+      );
+      const insertAt = activeIndex >= 0
+        ? activeIndex + 1
+        : Math.max(0, lastFilledIndex + 1);
+      const nextItem = {
+        ...makeDraft(undefined, current.length),
+        showItemNumber,
+      };
+
+      return [
+        ...current.slice(0, insertAt),
+        nextItem,
+        ...current.slice(insertAt),
+      ];
+    });
   }
 
   return (
@@ -143,7 +178,7 @@ export function QuotationLineItemsEditor({
         <div>
           <h3 className="text-sm font-bold text-[#172033]">รายการสินค้าและบริการ</h3>
         </div>
-        <button type="button" onClick={addItem} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#5270a9] bg-white px-3 py-1 text-xs font-bold text-[#003b84] transition hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายการ</button>
+        <div className="flex items-center gap-2"><button type="button" onClick={() => addItem(true)} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#5270a9] bg-white px-3 py-1 text-xs font-bold text-[#003b84] transition hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายการ</button><button type="button" onClick={() => addItem(false)} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#98a2b3] bg-white px-3 py-1 text-xs font-bold text-[#475467] transition hover:bg-[#f2f4f7] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายละเอียด</button></div>
       </div>
 
       <div className="overflow-x-auto border-x border-b border-[#1e293b]">
@@ -169,10 +204,10 @@ export function QuotationLineItemsEditor({
                       {item.showItemNumber ? displayNumber : ""}
                     </button>
                   </td>
-                  <td className="border-r border-[#1e293b] p-0"><textarea value={item.description} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "พิมพ์หัวข้องาน หรือรายการแรก" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
-                  <td className="border-r border-[#1e293b] p-0"><input value={item.unitPrice} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} inputMode="decimal" placeholder="0.00" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
-                  <td className="border-r border-[#1e293b] p-0"><input value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} inputMode="decimal" placeholder="0" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
-                  <td className="border-r border-[#1e293b] p-0"><input value={item.unit} onChange={(event) => updateItem(item.key, { unit: event.currentTarget.value })} className="h-8 w-full border-0 bg-transparent px-2 outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  <td className="border-r border-[#1e293b] p-0"><textarea value={item.description} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "พิมพ์หัวข้องาน หรือรายการแรก" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  <td className="border-r border-[#1e293b] p-0"><input value={item.unitPrice} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} onBlur={(event) => updateItem(item.key, { unitPrice: formatPrice(event.currentTarget.value) })} inputMode="decimal" placeholder="0.00" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  <td className="border-r border-[#1e293b] p-0"><input value={item.quantity} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} inputMode="decimal" placeholder="0" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  <td className="border-r border-[#1e293b] p-0"><input value={item.unit} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { unit: event.currentTarget.value.toUpperCase() })} className="h-8 w-full border-0 bg-transparent px-2 uppercase outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
                   <td className="px-2 py-1 text-right font-semibold text-[#172033]">{lineTotal ? lineTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
                 </tr>
               );
