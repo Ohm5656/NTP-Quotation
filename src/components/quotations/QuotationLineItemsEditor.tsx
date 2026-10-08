@@ -53,6 +53,10 @@ function formatPrice(value: string): string {
   });
 }
 
+function hasDescription(value: string): boolean {
+  return value.replace(/^\s*-\s*/, "").trim().length > 0;
+}
+
 function makeDraft(item?: QuotationLineItem, index = 0): DraftItem {
   return {
     key: item?.id ?? `new-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
@@ -120,7 +124,7 @@ export function QuotationLineItemsEditor({
 
   const serializedItems = JSON.stringify(
     items
-      .filter((item) => item.description.trim())
+      .filter((item) => hasDescription(item.description))
       .map((item, index) => ({
         line_no: index + 1,
         description: item.description.trim(),
@@ -130,7 +134,7 @@ export function QuotationLineItemsEditor({
         show_item_number: item.showItemNumber,
       })),
   );
-  const hasItemDetails = items.some((item) => item.description.trim());
+  const hasItemDetails = items.some((item) => hasDescription(item.description));
   const submittedTotal = !isNew && !hasItemDetails
     ? Number(initialTotal ?? 0).toFixed(2)
     : totals.grandTotal.toFixed(2);
@@ -147,7 +151,7 @@ export function QuotationLineItemsEditor({
         ? current.findIndex((item) => item.key === activeItemKey)
         : -1;
       const lastFilledIndex = current.reduce(
-        (lastIndex, item, index) => item.description.trim() ? index : lastIndex,
+        (lastIndex, item, index) => hasDescription(item.description) ? index : lastIndex,
         -1,
       );
       const insertAt = activeIndex >= 0
@@ -175,7 +179,7 @@ export function QuotationLineItemsEditor({
 
       return [
         ...current.slice(0, itemIndex + 1),
-        { ...makeDraft(undefined, current.length), showItemNumber: false },
+        { ...makeDraft(undefined, current.length), description: "- ", showItemNumber: false },
         ...current.slice(itemIndex + 1),
       ];
     });
@@ -212,7 +216,7 @@ export function QuotationLineItemsEditor({
             {items.map((item, index) => {
               const lineTotal = asNumber(item.unitPrice) * asNumber(item.quantity);
               const displayNumber = items.slice(0, index + 1).filter((entry) => entry.showItemNumber).length;
-              const canAddDetail = index > 0 && Boolean(item.description.trim());
+              const canAddDetail = index > 0 && hasDescription(item.description);
               return (
                 <tr key={item.key} className="group border-t border-[#1e293b] align-top">
                   <td className="border-r border-[#1e293b] p-0 text-center">
