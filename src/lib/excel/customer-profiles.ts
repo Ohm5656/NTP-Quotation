@@ -141,5 +141,6 @@ export function findCustomerProfile(
 export function defaultPaymentTerm(value: string | null | undefined): string {
   const text = (value ?? "").trim();
   if (!text) return "";
+  if (text === "เงินสด") return "เครดิต 60 วัน";
   return /วัน|เครดิต|ชำระ/i.test(text) ? text : `เครดิต ${text} วัน`;
 }

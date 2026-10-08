@@ -38,6 +38,7 @@ const initialState: CreateQuotationState = { success: false };
 
 function paymentText(value: string): string {
   if (!value) return "";
+  if (value.trim() === "เงินสด") return "เครดิต 60 วัน";
   return /วัน|เครดิต|ชำระ/i.test(value) ? value : `เครดิต ${value} วัน`;
 }
 
@@ -73,7 +74,7 @@ export function QuotationPreviewForm({
     [customers, customerProfiles],
   );
   const termOptions = useMemo(
-    () => Array.from(new Set(["เครดิต 0 วัน", "เครดิต 15 วัน", "เครดิต 30 วัน", ...paymentTerms, ...customerProfiles.map((profile) => paymentText(profile.paymentTerm))].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th")),
+    () => Array.from(new Set(["เครดิต 0 วัน", "เครดิต 15 วัน", "เครดิต 30 วัน", "เครดิต 60 วัน", ...paymentTerms, ...customerProfiles.map((profile) => paymentText(profile.paymentTerm))].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th")),
     [customerProfiles, paymentTerms],
   );
   const contactOptions = useMemo(
