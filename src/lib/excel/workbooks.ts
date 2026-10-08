@@ -38,6 +38,8 @@ const TEMPLATE_DIR = path.join(process.cwd(), "templates", "excel");
 const INITIAL_LINE_COUNT = 12;
 const MAX_LINE_COUNT = 50;
 const FIRST_LINE_ROW = 18;
+const REGISTER_FIRST_DATA_ROW = 2;
+const REGISTER_STYLE_ROW = 7;
 
 const THAI_DIGITS = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
 const THAI_PLACES = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
@@ -253,21 +255,21 @@ export async function buildQuotationRegisterWorkbook(quotations: ExportQuotation
   const sheet = workbook.getWorksheet("ใบเสนอราคา") ?? workbook.worksheets[0];
   if (!sheet) throw new Error("Quotation register template worksheet is missing");
 
-  const firstDataRow = 2;
-  const existingRows = Math.max(sheet.rowCount, firstDataRow);
-  const rowsNeeded = firstDataRow + quotations.length - 1;
+  const existingRows = Math.max(sheet.rowCount, REGISTER_FIRST_DATA_ROW);
+  const rowsNeeded = REGISTER_FIRST_DATA_ROW + quotations.length - 1;
 
   for (let rowNumber = existingRows + 1; rowNumber <= rowsNeeded; rowNumber += 1) {
-    copyRowFormat(sheet, firstDataRow, rowNumber);
+    copyRowFormat(sheet, REGISTER_STYLE_ROW, rowNumber);
   }
 
   const lastRow = Math.max(existingRows, rowsNeeded);
-  for (let rowNumber = firstDataRow; rowNumber <= lastRow; rowNumber += 1) {
+  for (let rowNumber = REGISTER_FIRST_DATA_ROW; rowNumber <= lastRow; rowNumber += 1) {
     for (let column = 1; column <= 9; column += 1) sheet.getRow(rowNumber).getCell(column).value = null;
   }
 
   quotations.forEach((quotation, index) => {
-    const row = sheet.getRow(firstDataRow + index);
+    const row = sheet.getRow(REGISTER_FIRST_DATA_ROW + index);
+    copyRowFormat(sheet, REGISTER_STYLE_ROW, row.number);
     row.getCell(1).value = dateOrBlank(quotation.quotation_date);
     row.getCell(2).value = quotation.quotation_no ?? "";
     row.getCell(3).value = quotation.boq_no ?? "";
