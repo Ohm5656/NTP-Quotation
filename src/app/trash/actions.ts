@@ -96,3 +96,55 @@ export async function restoreQuotation(
     success: true,
   };
 }
+
+export async function permanentlyDeleteQuotation(
+  quotationId: string,
+  customerId?: string | null,
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  if (!quotationId) {
+    return {
+      success: false,
+      error: "ไม่พบรหัสใบเสนอราคา",
+    };
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quotations")
+    .delete()
+    .eq("id", quotationId)
+    .not("deleted_at", "is", null)
+    .select("id");
+
+  if (error) {
+    return {
+      success: false,
+      error: `ไม่สามารถลบใบเสนอราคาอย่างถาวรได้: ${error.message}`,
+    };
+  }
+
+  if (!data?.length) {
+    return {
+      success: false,
+      error: "ไม่พบใบเสนอราคาในถังขยะ หรือรายการนี้ถูกลบไปแล้ว",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/quotations");
+  revalidatePath("/trash");
+
+  if (customerId) {
+    revalidatePath(`/customers/${customerId}`);
+  }
+
+  revalidatePath("/reports/monthly");
+  revalidatePath("/reports/yearly");
+
+  return {
+    success: true,
+  };
+}

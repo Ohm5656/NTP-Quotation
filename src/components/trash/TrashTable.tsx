@@ -14,6 +14,10 @@ import {
   RestoreQuotationButton,
 } from "@/components/trash/RestoreQuotationButton";
 
+import {
+  PermanentlyDeleteQuotationButton,
+} from "@/components/trash/PermanentlyDeleteQuotationButton";
+
 import type {
   TrashQuotationItem,
 } from "@/types/trash";
@@ -317,14 +321,28 @@ export function TrashTable({
                       text-center
                     "
                   >
-                    <RestoreQuotationButton
-                      quotationId={
-                        quotation.id
-                      }
-                      customerId={
-                        quotation.customer_id
-                      }
-                    />
+                    <div className="inline-flex items-center justify-center gap-2">
+                      <RestoreQuotationButton
+                        quotationId={
+                          quotation.id
+                        }
+                        customerId={
+                          quotation.customer_id
+                        }
+                      />
+
+                      <PermanentlyDeleteQuotationButton
+                        quotationId={
+                          quotation.id
+                        }
+                        quotationNo={
+                          quotation.quotation_no
+                        }
+                        customerId={
+                          quotation.customer_id
+                        }
+                      />
+                    </div>
                   </td>
                 </tr>
               ),
