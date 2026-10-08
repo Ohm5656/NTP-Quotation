@@ -59,6 +59,7 @@ export function QuotationPreviewForm({
   const [customerTaxId, setCustomerTaxId] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.taxId ?? "");
   const [attention, setAttention] = useState(quotation?.attention ?? "");
   const [paymentTerm, setPaymentTerm] = useState(quotation?.payment_term ?? "");
+  const [projectName, setProjectName] = useState(quotation?.project_name ?? "");
   const [quotationNo, setQuotationNo] = useState((quotation?.quotation_no ?? suggestedQuotationNo ?? "").replace(/^Q\s*/i, ""));
   const [state, formAction, pending] = useActionState(
     quotation
@@ -136,18 +137,19 @@ export function QuotationPreviewForm({
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" defaultValue={quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate} className={fieldClass} placeholder="06/10/2569" /></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" value={quotationNo} onChange={(event) => setQuotationNo(event.currentTarget.value.replace(/^Q\s*/i, ""))} className={`${fieldClass} font-bold`} aria-label="Quotation number" /></div></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">อ้างอิง BOQ :</label><div className="flex items-end"><span className="pb-1 font-bold">BOQ</span><input name="boq_no" defaultValue={quotation?.boq_no ?? ""} className={fieldClass} aria-label="BOQ number" /></div></div>
-            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} placeholder="เครดิต 15 วัน" /></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} /></div>
             <datalist id="preview-payment-options">{termOptions.map((term) => <option key={term} value={term} />)}</datalist>
           </div>
         </section>
 
         <section className="border-b border-[#0f172a] py-2">
-          <div className="grid grid-cols-[70px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">Project :</label><input name="project_name" defaultValue={quotation?.project_name ?? ""} className={`${fieldClass} font-bold`} placeholder="ชื่อโปรเจกต์" /></div>
+          <div className="grid grid-cols-[70px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">Project :</label><input name="project_name" value={projectName} onChange={(event) => setProjectName(event.currentTarget.value)} className={`${fieldClass} font-bold`} placeholder="ชื่อโปรเจกต์" /></div>
           <p className="mt-2 pl-[70px] text-xs">บริษัทมีความยินดีที่จะเสนอราคาสินค้า ดังต่อไปนี้ :</p>
         </section>
 
         <section className="pt-0">
           <QuotationLineItemsEditor
+            projectName={projectName}
             initialItems={quotation?.quotation_line_items}
             initialRemarks={quotation?.remarks}
             initialDiscount={quotation?.discount_amount}

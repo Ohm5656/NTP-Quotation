@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { QuotationLineItem } from "@/types/database";
 
@@ -14,6 +14,7 @@ type DraftItem = {
 };
 
 type Props = {
+  projectName?: string;
   initialItems?: QuotationLineItem[];
   initialRemarks?: string | null;
   initialDiscount?: number | string | null;
@@ -48,6 +49,7 @@ function makeDraft(item?: QuotationLineItem, index = 0): DraftItem {
 }
 
 export function QuotationLineItemsEditor({
+  projectName = "",
   initialItems = [],
   initialRemarks,
   initialDiscount,
@@ -69,6 +71,26 @@ export function QuotationLineItemsEditor({
   const [remarks, setRemarks] = useState(initialRemarks ?? "");
   const [discount, setDiscount] = useState(numberText(initialDiscount ?? 0));
   const [vatPercent, setVatPercent] = useState(() => conciseNumber(Number(initialVatRate ?? 0.07) * 100));
+  const [lastProjectDescription, setLastProjectDescription] = useState(projectName.trim());
+
+  useEffect(() => {
+    const nextProjectDescription = projectName.trim();
+
+    setItems((current) => {
+      const firstItem = current[0];
+      if (!firstItem) return current;
+
+      const wasFilledFromProject = firstItem.description === lastProjectDescription;
+      if (firstItem.description.trim() && !wasFilledFromProject) return current;
+      if (firstItem.description === nextProjectDescription) return current;
+
+      return current.map((item, index) => index === 0
+        ? { ...item, description: nextProjectDescription }
+        : item);
+    });
+
+    setLastProjectDescription(nextProjectDescription);
+  }, [lastProjectDescription, projectName]);
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
