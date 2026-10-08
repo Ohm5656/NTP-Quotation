@@ -79,6 +79,14 @@ function thaiBahtText(value: number): string {
   return `${thaiIntegerText(baht)}บาท${satang ? `${thaiIntegerText(satang)}สตางค์` : "ถ้วน"}`;
 }
 
+function splitRemarks(value: string | null | undefined): [string, string] {
+  const lines = (value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return [lines[0] ?? "", lines.slice(1).join(" ")];
+}
+
 function thaiExcelDate(value: string | null): Date | null {
   if (!value) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -193,13 +201,25 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   const subtotalRow = summaryStartRow + 2;
   const vatRow = summaryStartRow + 3;
   const grandTotalRow = summaryStartRow + 4;
+  const [note, paymentNote] = splitRemarks(quotation.remarks);
 
-  sheet.getCell(`B${totalRow}`).value = quotation.remarks?.trim()
-    ? `หมายเหตุ  ${quotation.remarks.trim()}`
-    : "หมายเหตุ";
-  sheet.getCell(`B${discountRow}`).value = paymentTerm
+  sheet.getCell(`B${totalRow}`).value = {
+    richText: [
+      { text: "หมายเหตุ  " },
+      {
+        text: note,
+        font: {
+          name: "Angsana New",
+          size: 18,
+          family: 1,
+          color: { argb: "FF000000" },
+        },
+      },
+    ],
+  };
+  sheet.getCell(`B${discountRow}`).value = paymentNote || (paymentTerm
     ? `เงื่อนไขการชำระเงิน : ${paymentTerm}`
-    : "เงื่อนไขการชำระเงิน :";
+    : "เงื่อนไขการชำระเงิน :");
   sheet.getCell(`G${totalRow}`).value = {
     formula: `SUM(G${FIRST_LINE_ROW}:G${summaryStartRow - 1})`,
     result: total,
