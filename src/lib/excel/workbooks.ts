@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 
 import type {
   QuotationLineItem,
@@ -39,7 +40,6 @@ const INITIAL_LINE_COUNT = 12;
 const MAX_LINE_COUNT = 50;
 const FIRST_LINE_ROW = 18;
 const REGISTER_FIRST_DATA_ROW = 2;
-const REGISTER_STYLE_ROW = 7;
 
 const THAI_DIGITS = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
 const THAI_PLACES = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
@@ -125,6 +125,58 @@ function prefixedRegisterText(value: string | null, prefix: string): string {
 function registerText(value: string | null): string {
   const text = value?.trim() ?? "";
   return text === "-" ? "" : text;
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function registerCell(address: string, style: string, value: string | number | null): string {
+  if (value === null || value === "") return `<c r="${address}" s="${style}"/>`;
+  if (typeof value === "number") return `<c r="${address}" s="${style}"><v>${value}</v></c>`;
+  return `<c r="${address}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(value)}</t></is></c>`;
+}
+
+function registerStyleMap(templateRow: string): Record<string, string> {
+  return Object.fromEntries(
+    Array.from("ABCDEFGHI", (column) => {
+      const match = new RegExp(`<c\\b[^>]*\\br="${column}\\d+"[^>]*\\bs="(\\d+)"`).exec(templateRow);
+      if (!match) throw new Error(`Quotation register style is missing for column ${column}`);
+      return [column, match[1]];
+    }),
+  );
+}
+
+function sharedStringItems(sharedStringsXml: string): string[] {
+  const items: string[] = [];
+  sharedStringsXml.replace(/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g, (_match, content: string) => {
+    items.push(content);
+    return _match;
+  });
+  return items;
+}
+
+function inlineSharedStringCells(worksheetXml: string, sharedStrings: string[]): string {
+  const sharedCellCount = (worksheetXml.match(/\bt="s"/g) ?? []).length;
+  let replacedCellCount = 0;
+  const inlined = worksheetXml.replace(
+    /<c\b([^>]*?)\bt="s"([^>]*)><v>(\d+)<\/v><\/c>/g,
+    (_cell, beforeType: string, afterType: string, indexText: string) => {
+      const content = sharedStrings[Number(indexText)];
+      if (content === undefined) throw new Error(`Quotation register shared string ${indexText} is missing`);
+      replacedCellCount += 1;
+      return `<c${beforeType}${afterType} t="inlineStr"><is>${content}</is></c>`;
+    },
+  );
+  if (replacedCellCount !== sharedCellCount) {
+    throw new Error("Quotation register contains an unsupported shared-string cell");
+  }
+  return inlined;
 }
 
 function copyRowFormat(worksheet: ExcelJS.Worksheet, sourceRowNumber: number, targetRowNumber: number) {
@@ -268,44 +320,99 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
 }
 
 export async function buildQuotationRegisterWorkbook(quotations: ExportQuotation[]): Promise<Buffer> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load((await readFile(path.join(TEMPLATE_DIR, "quotation-register.xlsx"))) as never);
-  const sheet = workbook.getWorksheet("ใบเสนอราคา") ?? workbook.worksheets[0];
-  if (!sheet) throw new Error("Quotation register template worksheet is missing");
+  // Patch only the worksheet values inside the original XLSX archive. Loading and
+  // saving this legacy file through ExcelJS rewrites its column metadata, which can
+  // make Excel display every column at the default width. Keeping the archive intact
+  // preserves the source workbook's exact fonts, colours, widths and print settings.
+  const template = await readFile(path.join(TEMPLATE_DIR, "quotation-register.xlsx"));
+  const archive = await JSZip.loadAsync(template);
+  const worksheet = archive.file("xl/worksheets/sheet1.xml");
+  if (!worksheet) throw new Error("Quotation register template worksheet is missing");
 
-  // Keep values readable in Excel viewers that render the legacy Thai font wider
-  // than the original workstation.
-  sheet.getColumn(1).width = 16;
-  sheet.getColumn(2).width = 16;
-  sheet.getColumn(3).width = 16;
-  sheet.getColumn(6).width = 18;
+  let worksheetXml = await worksheet.async("string");
+  const sheetData = /<sheetData>([\s\S]*?)<\/sheetData>/.exec(worksheetXml);
+  if (!sheetData) throw new Error("Quotation register template data is missing");
 
-  const existingRows = Math.max(sheet.rowCount, REGISTER_FIRST_DATA_ROW);
-  const rowsNeeded = REGISTER_FIRST_DATA_ROW + quotations.length - 1;
-
-  for (let rowNumber = existingRows + 1; rowNumber <= rowsNeeded; rowNumber += 1) {
-    copyRowFormat(sheet, REGISTER_STYLE_ROW, rowNumber);
+  const templateRows = sheetData[1].match(/<row\b[\s\S]*?<\/row>/g) ?? [];
+  const headerRow = templateRows.find((row) => /<row\b[^>]*\br="1"(?:\s|>)/.test(row));
+  const templateDataRow = templateRows.at(-1);
+  if (!headerRow || !templateDataRow) {
+    throw new Error("Quotation register template rows are missing");
   }
 
-  const lastRow = Math.max(existingRows, rowsNeeded);
-  for (let rowNumber = REGISTER_FIRST_DATA_ROW; rowNumber <= lastRow; rowNumber += 1) {
-    for (let column = 1; column <= 9; column += 1) sheet.getRow(rowNumber).getCell(column).value = null;
-  }
+  const styles = registerStyleMap(templateDataRow);
+  const templateRowTag = /^<row\b[^>]*>/.exec(templateDataRow)?.[0];
+  if (!templateRowTag) throw new Error("Quotation register row format is missing");
 
-  quotations.forEach((quotation, index) => {
-    const row = sheet.getRow(REGISTER_FIRST_DATA_ROW + index);
-    copyRowFormat(sheet, REGISTER_STYLE_ROW, row.number);
-    row.getCell(1).value = thaiDateText(quotation.quotation_date);
-    row.getCell(2).value = prefixedRegisterText(quotation.quotation_no, "Q");
-    row.getCell(3).value = prefixedRegisterText(quotation.boq_no, "BOQ");
-    row.getCell(4).value = quotation.customer_name_raw ?? "";
-    row.getCell(5).value = quotation.project_name ?? "";
-    row.getCell(6).value = quotation.total_amount === null ? "" : Number(quotation.total_amount ?? 0);
-    row.getCell(6).numFmt = "#,##0.00";
-    row.getCell(7).value = registerText(quotation.po);
-    row.getCell(8).value = quotation.attention ?? "";
-    row.getCell(9).value = quotation.email ?? "";
+  const dataRows = quotations.map((quotation, index) => {
+    const rowNumber = REGISTER_FIRST_DATA_ROW + index;
+    const rowTag = templateRowTag.replace(/\br="\d+"/, `r="${rowNumber}"`);
+    const total = quotation.total_amount === null ? null : finiteNumber(quotation.total_amount);
+
+    return `${rowTag}${[
+      registerCell(`A${rowNumber}`, styles.A, thaiDateText(quotation.quotation_date)),
+      registerCell(`B${rowNumber}`, styles.B, prefixedRegisterText(quotation.quotation_no, "Q")),
+      registerCell(`C${rowNumber}`, styles.C, prefixedRegisterText(quotation.boq_no, "BOQ")),
+      registerCell(`D${rowNumber}`, styles.D, quotation.customer_name_raw ?? ""),
+      registerCell(`E${rowNumber}`, styles.E, quotation.project_name ?? ""),
+      registerCell(`F${rowNumber}`, styles.F, total),
+      registerCell(`G${rowNumber}`, styles.G, registerText(quotation.po)),
+      registerCell(`H${rowNumber}`, styles.H, quotation.attention ?? ""),
+      registerCell(`I${rowNumber}`, styles.I, quotation.email ?? ""),
+    ].join("")}</row>`;
+  }).join("");
+
+  const lastRow = Math.max(1, quotations.length + 1);
+  worksheetXml = worksheetXml
+    .replace(/<dimension\b[^>]*\bref="[^"]*"[^>]*\/>/, `<dimension ref="A1:I${lastRow}"/>`)
+    .replace(/<sheetData>[\s\S]*?<\/sheetData>/, `<sheetData>${headerRow}${dataRows}</sheetData>`)
+    .replace(/<hyperlinks>[\s\S]*?<\/hyperlinks>/, "")
+    .replace(
+      /<sheetViews>[\s\S]*?<\/sheetViews>/,
+      '<sheetViews><sheetView tabSelected="1" zoomScale="113" zoomScaleNormal="113" zoomScaleSheetLayoutView="85" workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>',
+    );
+
+  archive.file("xl/worksheets/sheet1.xml", worksheetXml);
+
+  // The source workbook has three worksheets sharing one string table. Once the
+  // register rows are replaced, the old table's reference counts no longer match
+  // and desktop Excel treats the file as corrupt. Inline every shared string in
+  // all worksheets, then remove the now-unused table and its package metadata.
+  const sharedStringsFile = archive.file("xl/sharedStrings.xml");
+  if (!sharedStringsFile) throw new Error("Quotation register shared strings are missing");
+  const sharedStrings = sharedStringItems(await sharedStringsFile.async("string"));
+  const worksheetPaths = Object.keys(archive.files)
+    .filter((filePath) => /^xl\/worksheets\/sheet\d+\.xml$/.test(filePath));
+  for (const worksheetPath of worksheetPaths) {
+    const worksheetPart = archive.file(worksheetPath);
+    if (!worksheetPart) continue;
+    archive.file(
+      worksheetPath,
+      inlineSharedStringCells(await worksheetPart.async("string"), sharedStrings),
+    );
+  }
+  archive.remove("xl/sharedStrings.xml");
+  archive.remove("xl/calcChain.xml");
+
+  const relationshipsFile = archive.file("xl/_rels/workbook.xml.rels");
+  const contentTypesFile = archive.file("[Content_Types].xml");
+  if (!relationshipsFile || !contentTypesFile) {
+    throw new Error("Quotation register package metadata is missing");
+  }
+  archive.file(
+    "xl/_rels/workbook.xml.rels",
+    (await relationshipsFile.async("string"))
+      .replace(/<Relationship\b[^>]*\bType="[^"]*\/(?:sharedStrings|calcChain)"[^>]*\/>/g, ""),
+  );
+  archive.file(
+    "[Content_Types].xml",
+    (await contentTypesFile.async("string"))
+      .replace(/<Override\b[^>]*\bPartName="\/xl\/(?:sharedStrings|calcChain)\.xml"[^>]*\/>/g, ""),
+  );
+
+  return archive.generateAsync({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 },
   });
-
-  return Buffer.from(await workbook.xlsx.writeBuffer());
 }
