@@ -39,6 +39,46 @@ const INITIAL_LINE_COUNT = 12;
 const MAX_LINE_COUNT = 50;
 const FIRST_LINE_ROW = 18;
 
+const THAI_DIGITS = ["", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+const THAI_PLACES = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน"];
+
+function finiteNumber(value: number | string | null | undefined): number {
+  const number = Number(value ?? 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function thaiIntegerText(value: number): string {
+  if (value === 0) return "ศูนย์";
+  if (value >= 1_000_000) {
+    const millions = Math.floor(value / 1_000_000);
+    const remainder = value % 1_000_000;
+    return `${thaiIntegerText(millions)}ล้าน${remainder ? thaiIntegerText(remainder) : ""}`;
+  }
+
+  const text = String(value);
+  return [...text].map((character, index) => {
+    const digit = Number(character);
+    if (!digit) return "";
+
+    const place = text.length - index - 1;
+    if (place === 0 && digit === 1 && text.length > 1) return "เอ็ด";
+    if (place === 1 && digit === 1) return "สิบ";
+    if (place === 1 && digit === 2) return "ยี่สิบ";
+    return `${THAI_DIGITS[digit]}${THAI_PLACES[place]}`;
+  }).join("");
+}
+
+function thaiBahtText(value: number): string {
+  const satangTotal = Math.round(Math.max(0, value) * 100);
+  const baht = Math.floor(satangTotal / 100);
+  const satang = satangTotal % 100;
+  return `${thaiIntegerText(baht)}บาท${satang ? `${thaiIntegerText(satang)}สตางค์` : "ถ้วน"}`;
+}
+
 function thaiExcelDate(value: string | null): Date | null {
   if (!value) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -127,8 +167,8 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
     const item = lineItems[index];
     if (!item) continue;
     if (item.show_item_number) visibleNumber += 1;
-    const price = Number(item.unit_price ?? 0);
-    const quantity = Number(item.quantity ?? 0);
+    const price = finiteNumber(item.unit_price);
+    const quantity = finiteNumber(item.quantity);
 
     row.getCell(2).value = item.show_item_number ? visibleNumber : "";
     row.getCell(3).value = item.description;
@@ -140,8 +180,14 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
       : { formula: `D${rowNumber}*E${rowNumber}`, result: price * quantity };
   }
 
-  const discount = Number(quotation.discount_amount ?? 0);
-  const vatRate = Number(quotation.vat_rate ?? 0.07);
+  const total = roundMoney(lineItems.reduce((sum, item) => (
+    sum + finiteNumber(item.unit_price) * finiteNumber(item.quantity)
+  ), 0));
+  const discount = Math.max(0, roundMoney(finiteNumber(quotation.discount_amount)));
+  const subtotal = Math.max(0, roundMoney(total - discount));
+  const vatRate = Math.max(0, finiteNumber(quotation.vat_rate ?? 0.07));
+  const vat = roundMoney(subtotal * vatRate);
+  const grandTotal = roundMoney(subtotal + vat);
   const totalRow = summaryStartRow;
   const discountRow = summaryStartRow + 1;
   const subtotalRow = summaryStartRow + 2;
@@ -154,14 +200,29 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   sheet.getCell(`B${discountRow}`).value = paymentTerm
     ? `เงื่อนไขการชำระเงิน : ${paymentTerm}`
     : "เงื่อนไขการชำระเงิน :";
-  sheet.getCell(`G${totalRow}`).value = { formula: `SUM(G${FIRST_LINE_ROW}:G${summaryStartRow - 1})` };
+  sheet.getCell(`G${totalRow}`).value = {
+    formula: `SUM(G${FIRST_LINE_ROW}:G${summaryStartRow - 1})`,
+    result: total,
+  };
   sheet.getCell(`G${discountRow}`).value = discount;
-  sheet.getCell(`G${subtotalRow}`).value = { formula: `SUM(G${totalRow}-G${discountRow})` };
+  sheet.getCell(`G${subtotalRow}`).value = {
+    formula: `SUM(G${totalRow}-G${discountRow})`,
+    result: subtotal,
+  };
   sheet.getCell(`E${vatRow}`).value = vatRate;
-  sheet.getCell(`G${vatRow}`).value = { formula: `G${subtotalRow}*E${vatRow}` };
-  sheet.getCell(`B${grandTotalRow}`).value = { formula: `BAHTTEXT(G${grandTotalRow})` };
-  sheet.getCell(`C${grandTotalRow}`).value = { formula: `BAHTTEXT(G${grandTotalRow})` };
-  sheet.getCell(`G${grandTotalRow}`).value = { formula: `G${subtotalRow}+G${vatRow}` };
+  sheet.getCell(`G${vatRow}`).value = { formula: `G${subtotalRow}*E${vatRow}`, result: vat };
+  sheet.getCell(`B${grandTotalRow}`).value = {
+    formula: `BAHTTEXT(G${grandTotalRow})`,
+    result: thaiBahtText(grandTotal),
+  };
+  sheet.getCell(`C${grandTotalRow}`).value = {
+    formula: `BAHTTEXT(G${grandTotalRow})`,
+    result: thaiBahtText(grandTotal),
+  };
+  sheet.getCell(`G${grandTotalRow}`).value = {
+    formula: `G${subtotalRow}+G${vatRow}`,
+    result: grandTotal,
+  };
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
