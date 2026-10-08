@@ -118,8 +118,13 @@ function thaiDateText(value: string | null): string {
 
 function prefixedRegisterText(value: string | null, prefix: string): string {
   const text = value?.trim() ?? "";
-  if (!text) return "";
+  if (!text || text === "-") return "";
   return text.toUpperCase().startsWith(prefix) ? `${prefix}${text.slice(prefix.length)}` : `${prefix}${text}`;
+}
+
+function registerText(value: string | null): string {
+  const text = value?.trim() ?? "";
+  return text === "-" ? "" : text;
 }
 
 function copyRowFormat(worksheet: ExcelJS.Worksheet, sourceRowNumber: number, targetRowNumber: number) {
@@ -297,7 +302,7 @@ export async function buildQuotationRegisterWorkbook(quotations: ExportQuotation
     row.getCell(5).value = quotation.project_name ?? "";
     row.getCell(6).value = quotation.total_amount === null ? "" : Number(quotation.total_amount ?? 0);
     row.getCell(6).numFmt = "#,##0.00";
-    row.getCell(7).value = quotation.po ?? "";
+    row.getCell(7).value = registerText(quotation.po);
     row.getCell(8).value = quotation.attention ?? "";
     row.getCell(9).value = quotation.email ?? "";
   });
