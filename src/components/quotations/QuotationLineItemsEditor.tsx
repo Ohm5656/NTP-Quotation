@@ -23,6 +23,9 @@ type Props = {
   isNew: boolean;
 };
 
+const INITIAL_LINE_COUNT = 12;
+const MAX_LINE_COUNT = 50;
+
 function numberText(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === "") return "";
   return String(value);
@@ -60,9 +63,9 @@ export function QuotationLineItemsEditor({
   const [items, setItems] = useState<DraftItem[]>(() => {
     const savedItems = [...initialItems]
       .sort((a, b) => a.line_no - b.line_no)
-      .slice(0, 12)
+      .slice(0, MAX_LINE_COUNT)
       .map(makeDraft);
-    const blankItems = Array.from({ length: Math.max(0, 12 - savedItems.length) }, (_, index) => ({
+    const blankItems = Array.from({ length: Math.max(0, INITIAL_LINE_COUNT - savedItems.length) }, (_, index) => ({
       ...makeDraft(undefined, savedItems.length + index),
       showItemNumber: savedItems.length + index !== 0,
     }));
@@ -122,6 +125,12 @@ export function QuotationLineItemsEditor({
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
   }
 
+  function addItem() {
+    setItems((current) => current.length >= MAX_LINE_COUNT
+      ? current
+      : [...current, { ...makeDraft(undefined, current.length), showItemNumber: true }]);
+  }
+
   return (
     <section>
       <input type="hidden" name="line_items_json" value={serializedItems} />
@@ -134,7 +143,7 @@ export function QuotationLineItemsEditor({
         <div>
           <h3 className="text-sm font-bold text-[#172033]">รายการสินค้าและบริการ</h3>
         </div>
-        <span className="text-xs text-[#667085]">สูงสุด 12 บรรทัด</span>
+        <button type="button" onClick={addItem} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#5270a9] bg-white px-3 py-1 text-xs font-bold text-[#003b84] transition hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายการ</button>
       </div>
 
       <div className="overflow-x-auto border-x border-b border-[#1e293b]">

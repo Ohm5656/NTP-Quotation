@@ -254,7 +254,7 @@ function parseLineItems(formData: FormData): ParsedLineItem[] | null {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
 
-    return parsed.slice(0, 12).map((item, index) => {
+    return parsed.slice(0, 50).map((item, index) => {
       if (!item || typeof item !== "object") throw new Error("Invalid line item");
       const record = item as Record<string, unknown>;
       const description = typeof record.description === "string" ? record.description.trim() : "";

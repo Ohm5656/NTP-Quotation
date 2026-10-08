@@ -35,6 +35,9 @@ export type ExportQuotation = {
 };
 
 const TEMPLATE_DIR = path.join(process.cwd(), "templates", "excel");
+const INITIAL_LINE_COUNT = 12;
+const MAX_LINE_COUNT = 50;
+const FIRST_LINE_ROW = 18;
 
 function thaiExcelDate(value: string | null): Date | null {
   if (!value) return null;
@@ -93,10 +96,31 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
 
   const lineItems = [...(quotation.quotation_line_items ?? [])]
     .sort((a, b) => a.line_no - b.line_no)
-    .slice(0, 12);
+    .slice(0, MAX_LINE_COUNT);
+
+  const dataRowCount = Math.max(INITIAL_LINE_COUNT, lineItems.length);
+  const summaryStartRow = FIRST_LINE_ROW + dataRowCount;
+
+  if (dataRowCount > INITIAL_LINE_COUNT) {
+    const extraRows = dataRowCount - INITIAL_LINE_COUNT;
+    sheet.spliceRows(
+      FIRST_LINE_ROW + INITIAL_LINE_COUNT,
+      0,
+      ...Array.from({ length: extraRows }, () => []),
+    );
+
+    for (let index = 0; index < extraRows; index += 1) {
+      copyRowFormat(
+        sheet,
+        FIRST_LINE_ROW + INITIAL_LINE_COUNT - 1,
+        FIRST_LINE_ROW + INITIAL_LINE_COUNT + index,
+      );
+    }
+  }
+
   let visibleNumber = 0;
-  for (let index = 0; index < 12; index += 1) {
-    const rowNumber = 18 + index;
+  for (let index = 0; index < dataRowCount; index += 1) {
+    const rowNumber = FIRST_LINE_ROW + index;
     const row = sheet.getRow(rowNumber);
     for (let column = 2; column <= 7; column += 1) row.getCell(column).value = null;
 
@@ -118,14 +142,26 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
 
   const discount = Number(quotation.discount_amount ?? 0);
   const vatRate = Number(quotation.vat_rate ?? 0.07);
-  sheet.getCell("B30").value = quotation.remarks?.trim()
+  const totalRow = summaryStartRow;
+  const discountRow = summaryStartRow + 1;
+  const subtotalRow = summaryStartRow + 2;
+  const vatRow = summaryStartRow + 3;
+  const grandTotalRow = summaryStartRow + 4;
+
+  sheet.getCell(`B${totalRow}`).value = quotation.remarks?.trim()
     ? `หมายเหตุ  ${quotation.remarks.trim()}`
     : "หมายเหตุ";
-  sheet.getCell("B31").value = paymentTerm
+  sheet.getCell(`B${discountRow}`).value = paymentTerm
     ? `เงื่อนไขการชำระเงิน : ${paymentTerm}`
     : "เงื่อนไขการชำระเงิน :";
-  sheet.getCell("G31").value = discount;
-  sheet.getCell("E33").value = vatRate;
+  sheet.getCell(`G${totalRow}`).value = { formula: `SUM(G${FIRST_LINE_ROW}:G${summaryStartRow - 1})` };
+  sheet.getCell(`G${discountRow}`).value = discount;
+  sheet.getCell(`G${subtotalRow}`).value = { formula: `SUM(G${totalRow}-G${discountRow})` };
+  sheet.getCell(`E${vatRow}`).value = vatRate;
+  sheet.getCell(`G${vatRow}`).value = { formula: `G${subtotalRow}*E${vatRow}` };
+  sheet.getCell(`B${grandTotalRow}`).value = { formula: `BAHTTEXT(G${grandTotalRow})` };
+  sheet.getCell(`C${grandTotalRow}`).value = { formula: `BAHTTEXT(G${grandTotalRow})` };
+  sheet.getCell(`G${grandTotalRow}`).value = { formula: `G${subtotalRow}+G${vatRow}` };
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
