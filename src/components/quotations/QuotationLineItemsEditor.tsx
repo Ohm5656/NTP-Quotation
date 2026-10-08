@@ -166,6 +166,21 @@ export function QuotationLineItemsEditor({
     });
   }
 
+  function addDetailAfter(itemKey: string) {
+    setItems((current) => {
+      if (current.length >= MAX_LINE_COUNT) return current;
+
+      const itemIndex = current.findIndex((item) => item.key === itemKey);
+      if (itemIndex < 0) return current;
+
+      return [
+        ...current.slice(0, itemIndex + 1),
+        { ...makeDraft(undefined, current.length), showItemNumber: false },
+        ...current.slice(itemIndex + 1),
+      ];
+    });
+  }
+
   return (
     <section>
       <input type="hidden" name="line_items_json" value={serializedItems} />
@@ -178,7 +193,7 @@ export function QuotationLineItemsEditor({
         <div>
           <h3 className="text-sm font-bold text-[#172033]">รายการสินค้าและบริการ</h3>
         </div>
-        <div className="flex items-center gap-2"><button type="button" onClick={() => addItem(true)} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#5270a9] bg-white px-3 py-1 text-xs font-bold text-[#003b84] transition hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายการ</button><button type="button" onClick={() => addItem(false)} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#98a2b3] bg-white px-3 py-1 text-xs font-bold text-[#475467] transition hover:bg-[#f2f4f7] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายละเอียด</button></div>
+        <button type="button" onClick={() => addItem(true)} disabled={items.length >= MAX_LINE_COUNT} className="inline-flex items-center gap-1 border border-[#5270a9] bg-white px-3 py-1 text-xs font-bold text-[#003b84] transition hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-45">+ เพิ่มรายการ</button>
       </div>
 
       <div className="overflow-x-auto border-x border-b border-[#1e293b]">
@@ -200,9 +215,12 @@ export function QuotationLineItemsEditor({
               return (
                 <tr key={item.key} className="group border-t border-[#1e293b] align-top">
                   <td className="border-r border-[#1e293b] p-0 text-center">
-                    <button type="button" onClick={() => updateItem(item.key, { showItemNumber: !item.showItemNumber })} title="คลิกเพื่อซ่อน/แสดงลำดับ (ใช้กับหัวข้อ)" className="flex min-h-8 w-full items-center justify-center px-1 text-xs text-[#172033] outline-none hover:bg-[#eef3ff] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]">
-                      {item.showItemNumber ? displayNumber : ""}
-                    </button>
+                    <div className="flex min-h-8 items-stretch">
+                      <button type="button" onClick={() => updateItem(item.key, { showItemNumber: !item.showItemNumber })} title="คลิกเพื่อซ่อน/แสดงลำดับ (ใช้กับหัวข้อ)" className="flex min-w-0 flex-1 items-center justify-center px-1 text-xs text-[#172033] outline-none hover:bg-[#eef3ff] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]">
+                        {item.showItemNumber ? displayNumber : ""}
+                      </button>
+                      <button type="button" onClick={() => addDetailAfter(item.key)} disabled={items.length >= MAX_LINE_COUNT} title="เพิ่มรายละเอียดใต้บรรทัดนี้" aria-label="เพิ่มรายละเอียดใต้บรรทัดนี้" className="w-5 border-l border-[#d0d5dd] text-xs font-bold text-[#5573c9] outline-none transition hover:bg-[#eaf0ff] hover:text-[#17379c] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346] disabled:cursor-not-allowed disabled:opacity-35">+</button>
+                    </div>
                   </td>
                   <td className="border-r border-[#1e293b] p-0"><textarea value={item.description} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "พิมพ์หัวข้องาน หรือรายการแรก" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
                   <td className="border-r border-[#1e293b] p-0"><input value={item.unitPrice} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} onBlur={(event) => updateItem(item.key, { unitPrice: formatPrice(event.currentTarget.value) })} inputMode="decimal" placeholder="0.00" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
