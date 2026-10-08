@@ -16,8 +16,8 @@ export async function GET() {
       .from("quotations")
       .select("id, quotation_no, quotation_date, boq_no, customer_name_raw, project_name, total_amount, po, payment_term, attention, email, source_row")
       .is("deleted_at", null)
-      .order("quotation_date", { ascending: false, nullsFirst: false })
-      .order("source_row", { ascending: false })
+      .order("quotation_date", { ascending: true, nullsFirst: false })
+      .order("source_row", { ascending: true })
       .range(from, from + BATCH_SIZE - 1);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

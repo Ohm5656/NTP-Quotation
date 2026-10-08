@@ -109,6 +109,19 @@ function dateOrBlank(value: string | null): Date | string {
   return thaiExcelDate(value) ?? "";
 }
 
+function thaiDateText(value: string | null): string {
+  if (!value) return "";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  return `${match[3]}/${match[2]}/${Number(match[1]) + 543}`;
+}
+
+function prefixedRegisterText(value: string | null, prefix: string): string {
+  const text = value?.trim() ?? "";
+  if (!text) return "";
+  return text.toUpperCase().startsWith(prefix) ? `${prefix}${text.slice(prefix.length)}` : `${prefix}${text}`;
+}
+
 function copyRowFormat(worksheet: ExcelJS.Worksheet, sourceRowNumber: number, targetRowNumber: number) {
   const source = worksheet.getRow(sourceRowNumber);
   const target = worksheet.getRow(targetRowNumber);
@@ -255,6 +268,13 @@ export async function buildQuotationRegisterWorkbook(quotations: ExportQuotation
   const sheet = workbook.getWorksheet("ใบเสนอราคา") ?? workbook.worksheets[0];
   if (!sheet) throw new Error("Quotation register template worksheet is missing");
 
+  // Keep values readable in Excel viewers that render the legacy Thai font wider
+  // than the original workstation.
+  sheet.getColumn(1).width = 16;
+  sheet.getColumn(2).width = 16;
+  sheet.getColumn(3).width = 16;
+  sheet.getColumn(6).width = 18;
+
   const existingRows = Math.max(sheet.rowCount, REGISTER_FIRST_DATA_ROW);
   const rowsNeeded = REGISTER_FIRST_DATA_ROW + quotations.length - 1;
 
@@ -270,12 +290,13 @@ export async function buildQuotationRegisterWorkbook(quotations: ExportQuotation
   quotations.forEach((quotation, index) => {
     const row = sheet.getRow(REGISTER_FIRST_DATA_ROW + index);
     copyRowFormat(sheet, REGISTER_STYLE_ROW, row.number);
-    row.getCell(1).value = dateOrBlank(quotation.quotation_date);
-    row.getCell(2).value = quotation.quotation_no ?? "";
-    row.getCell(3).value = quotation.boq_no ?? "";
+    row.getCell(1).value = thaiDateText(quotation.quotation_date);
+    row.getCell(2).value = prefixedRegisterText(quotation.quotation_no, "Q");
+    row.getCell(3).value = prefixedRegisterText(quotation.boq_no, "BOQ");
     row.getCell(4).value = quotation.customer_name_raw ?? "";
     row.getCell(5).value = quotation.project_name ?? "";
     row.getCell(6).value = quotation.total_amount === null ? "" : Number(quotation.total_amount ?? 0);
+    row.getCell(6).numFmt = "#,##0.00";
     row.getCell(7).value = quotation.po ?? "";
     row.getCell(8).value = quotation.attention ?? "";
     row.getCell(9).value = quotation.email ?? "";
