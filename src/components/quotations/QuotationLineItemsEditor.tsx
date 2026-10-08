@@ -185,6 +185,11 @@ export function QuotationLineItemsEditor({
     });
   }
 
+  function removeDetail(itemKey: string) {
+    setItems((current) => current.filter((item) => item.key !== itemKey));
+    setActiveItemKey((current) => current === itemKey ? null : current);
+  }
+
   return (
     <section>
       <input type="hidden" name="line_items_json" value={serializedItems} />
@@ -217,6 +222,7 @@ export function QuotationLineItemsEditor({
               const lineTotal = asNumber(item.unitPrice) * asNumber(item.quantity);
               const displayNumber = items.slice(0, index + 1).filter((entry) => entry.showItemNumber).length;
               const canAddDetail = index > 0 && hasDescription(item.description);
+              const isDetailLine = index > 0 && !item.showItemNumber;
               return (
                 <tr key={item.key} className="group border-t border-[#1e293b] align-top">
                   <td className="border-r border-[#1e293b] p-0 text-center">
@@ -225,6 +231,7 @@ export function QuotationLineItemsEditor({
                         {item.showItemNumber ? displayNumber : ""}
                       </button>
                       {canAddDetail && <button type="button" onClick={() => addDetailAfter(item.key)} disabled={items.length >= MAX_LINE_COUNT} title="เพิ่มรายละเอียดใต้บรรทัดนี้" aria-label="เพิ่มรายละเอียดใต้บรรทัดนี้" className="w-5 border-l border-[#d0d5dd] text-xs font-bold text-[#5573c9] outline-none transition hover:bg-[#eaf0ff] hover:text-[#17379c] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346] disabled:cursor-not-allowed disabled:opacity-35">+</button>}
+                      {isDetailLine && <button type="button" onClick={() => removeDetail(item.key)} title="ลบรายละเอียดนี้" aria-label="ลบรายละเอียดนี้" className="w-5 border-l border-[#d0d5dd] text-sm font-bold leading-none text-[#b42318] outline-none transition hover:bg-[#fff0ef] hover:text-[#8f1d15] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]">×</button>}
                     </div>
                   </td>
                   <td className="border-r border-[#1e293b] p-0"><textarea value={item.description} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "หัวข้องานจาก Project" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
