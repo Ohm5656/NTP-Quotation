@@ -297,8 +297,16 @@ function calculateQuotationTotal(
  * Customer
  * ======================================================= */
 
+type CustomerProfileInput = {
+  address: string | null;
+  taxId: string | null;
+  contact: string | null;
+  paymentTerm: string | null;
+};
+
 async function resolveCustomer(
   customerInput: string,
+  profile: CustomerProfileInput,
 ): Promise<{
   id: string | null;
   name: string | null;
@@ -345,6 +353,12 @@ async function resolveCustomer(
   }
 
   if (existingCustomer) {
+    await saveCustomerProfile(
+      supabase,
+      existingCustomer.id,
+      profile,
+    );
+
     return {
       id:
         existingCustomer.id,
@@ -365,8 +379,11 @@ async function resolveCustomer(
       "customers",
     )
     .insert({
-      name:
-        normalizedName,
+      name: normalizedName,
+      ...(profile.address ? { address: profile.address } : {}),
+      ...(profile.taxId ? { tax_id: profile.taxId } : {}),
+      ...(profile.contact ? { contact: profile.contact } : {}),
+      ...(profile.paymentTerm ? { payment_term: profile.paymentTerm } : {}),
     })
     .select(
       "id, name",
@@ -435,6 +452,12 @@ export async function createQuotation(
     );
 
   const paymentTerm = optionalString(formData, "payment_term");
+  const customerProfile: CustomerProfileInput = {
+    address: optionalString(formData, "customer_address"),
+    taxId: optionalString(formData, "customer_tax_id"),
+    contact: optionalString(formData, "attention"),
+    paymentTerm,
+  };
   const lineItems = parseLineItems(formData);
   const remarks = optionalString(formData, "remarks");
   const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
@@ -537,6 +560,7 @@ export async function createQuotation(
     customer =
       await resolveCustomer(
         customerInput,
+        customerProfile,
       );
   } catch (error) {
     return {
@@ -714,6 +738,32 @@ export async function createQuotation(
   };
 }
 
+async function saveCustomerProfile(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  customerId: string,
+  profile: CustomerProfileInput,
+): Promise<void> {
+  const updates = {
+    ...(profile.address ? { address: profile.address } : {}),
+    ...(profile.taxId ? { tax_id: profile.taxId } : {}),
+    ...(profile.contact ? { contact: profile.contact } : {}),
+    ...(profile.paymentTerm ? { payment_term: profile.paymentTerm } : {}),
+  };
+
+  if (Object.keys(updates).length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("customers")
+    .update(updates)
+    .eq("id", customerId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 /* =========================================================
  * Update Quotation
  * ======================================================= */
@@ -738,6 +788,12 @@ export async function updateQuotation(
   const totalAmountRaw = getString(formData, "total_amount");
   const email = optionalString(formData, "email");
   const paymentTerm = optionalString(formData, "payment_term");
+  const customerProfile: CustomerProfileInput = {
+    address: optionalString(formData, "customer_address"),
+    taxId: optionalString(formData, "customer_tax_id"),
+    contact: optionalString(formData, "attention"),
+    paymentTerm,
+  };
   const lineItems = parseLineItems(formData);
   const remarks = optionalString(formData, "remarks");
   const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
@@ -779,7 +835,7 @@ export async function updateQuotation(
   };
 
   try {
-    customer = await resolveCustomer(customerInput);
+    customer = await resolveCustomer(customerInput, customerProfile);
   } catch (error) {
     return {
       success: false,

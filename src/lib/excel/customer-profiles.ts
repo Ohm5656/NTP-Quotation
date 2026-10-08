@@ -6,6 +6,10 @@ import path from "node:path";
 import ExcelJS from "exceljs";
 
 import {
+  createAdminSupabaseClient,
+} from "@/lib/supabase/admin";
+
+import {
   findLinkedCustomerProfile,
   normalizeCustomerProfileKey,
 } from "@/lib/customer-profile-links";
@@ -35,7 +39,7 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value).trim();
 }
 
-export async function getCustomerProfiles(): Promise<CustomerProfile[]> {
+async function getSpreadsheetCustomerProfiles(): Promise<CustomerProfile[]> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load((await readFile(PROFILE_PATH)) as never);
   const worksheet = workbook.worksheets[0];
@@ -56,6 +60,75 @@ export async function getCustomerProfiles(): Promise<CustomerProfile[]> {
     });
   }
   return profiles;
+}
+
+async function getSavedCustomerProfiles(): Promise<CustomerProfile[]> {
+  const supabase = createAdminSupabaseClient();
+  const profiles: CustomerProfile[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("name, tax_id, address, contact, payment_term")
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      throw new Error(`Unable to load saved customer details: ${error.message}`);
+    }
+
+    const batch = data ?? [];
+    profiles.push(
+      ...batch.map((customer) => ({
+        name: customer.name?.trim() ?? "",
+        taxId: customer.tax_id?.trim() ?? "",
+        address: customer.address?.trim() ?? "",
+        contact: customer.contact?.trim() ?? "",
+        paymentTerm: customer.payment_term?.trim() ?? "",
+      })).filter((profile) => profile.name),
+    );
+
+    if (batch.length < batchSize) {
+      return profiles;
+    }
+  }
+}
+
+function mergeCustomerProfile(
+  spreadsheetProfile: CustomerProfile,
+  savedProfile: CustomerProfile | undefined,
+): CustomerProfile {
+  if (!savedProfile) return spreadsheetProfile;
+
+  return {
+    name: spreadsheetProfile.name,
+    taxId: savedProfile.taxId || spreadsheetProfile.taxId,
+    address: savedProfile.address || spreadsheetProfile.address,
+    contact: savedProfile.contact || spreadsheetProfile.contact,
+    paymentTerm: savedProfile.paymentTerm || spreadsheetProfile.paymentTerm,
+  };
+}
+
+export async function getCustomerProfiles(): Promise<CustomerProfile[]> {
+  const [spreadsheetProfiles, savedProfiles] = await Promise.all([
+    getSpreadsheetCustomerProfiles(),
+    getSavedCustomerProfiles(),
+  ]);
+
+  const mergedProfiles = spreadsheetProfiles.map((profile) =>
+    mergeCustomerProfile(
+      profile,
+      findLinkedCustomerProfile(savedProfiles, profile.name),
+    ),
+  );
+
+  for (const savedProfile of savedProfiles) {
+    if (!findLinkedCustomerProfile(spreadsheetProfiles, savedProfile.name)) {
+      mergedProfiles.push(savedProfile);
+    }
+  }
+
+  return mergedProfiles;
 }
 
 export function findCustomerProfile(

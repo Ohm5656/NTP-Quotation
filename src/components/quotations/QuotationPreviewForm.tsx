@@ -55,6 +55,8 @@ export function QuotationPreviewForm({
   const router = useRouter();
   const isEditing = Boolean(quotation);
   const [customerName, setCustomerName] = useState(quotation?.customer_name_raw ?? "");
+  const [customerAddress, setCustomerAddress] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.address ?? "");
+  const [customerTaxId, setCustomerTaxId] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.taxId ?? "");
   const [attention, setAttention] = useState(quotation?.attention ?? "");
   const [paymentTerm, setPaymentTerm] = useState(quotation?.payment_term ?? "");
   const [quotationNo, setQuotationNo] = useState((quotation?.quotation_no ?? suggestedQuotationNo ?? "").replace(/^Q\s*/i, ""));
@@ -65,10 +67,6 @@ export function QuotationPreviewForm({
     initialState,
   );
 
-  const customerProfile = useMemo(
-    () => findLinkedCustomerProfile(customerProfiles, customerName),
-    [customerName, customerProfiles],
-  );
   const customerOptions = useMemo(
     () => Array.from(new Set([...customers.map((customer) => customer.name), ...customerProfiles.map((profile) => profile.name)])).sort((a, b) => a.localeCompare(b, "th")),
     [customers, customerProfiles],
@@ -91,8 +89,9 @@ export function QuotationPreviewForm({
   function chooseCustomer(name: string) {
     setCustomerName(name);
     const profile = findLinkedCustomerProfile(customerProfiles, name);
-    if (!profile) return;
-    if (!attention.trim() && profile.contact) setAttention(profile.contact);
+    setCustomerAddress(profile?.address ?? "");
+    setCustomerTaxId(profile?.taxId ?? "");
+    if (profile?.contact) setAttention(profile.contact);
   }
 
   const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[28px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
@@ -127,8 +126,8 @@ export function QuotationPreviewForm({
           <div className="space-y-2">
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="font-bold text-[#003b84]">ลูกค้า</label><input name="customer_name" value={customerName} onChange={(event) => chooseCustomer(event.currentTarget.value)} list="preview-customer-options" className={`${fieldClass} font-bold`} placeholder="เลือกบริษัท / สาขาลูกค้า" /></div>
             <datalist id="preview-customer-options">{customerOptions.map((name) => <option key={name} value={name} />)}</datalist>
-            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-sm">{customerProfile?.address ?? "เลือกชื่อลูกค้าเพื่อดึงที่อยู่และเลขผู้เสียภาษี"}</p></div>
-            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><p className="min-h-5 border-b border-dotted border-[#5270a9] px-1 text-xs">{customerProfile?.taxId ?? ""}</p></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><input name="customer_address" value={customerAddress} onChange={(event) => setCustomerAddress(event.currentTarget.value)} className={`${fieldClass} text-sm`} placeholder="กรอกที่อยู่ลูกค้า" /></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><input name="customer_tax_id" value={customerTaxId} onChange={(event) => setCustomerTaxId(event.currentTarget.value)} className={`${fieldClass} text-xs`} placeholder="กรอกเลขผู้เสียภาษี" /></div>
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => setAttention(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
             <datalist id="preview-contact-options">{contactOptions.map((contact) => <option key={contact} value={contact} />)}</datalist>
           </div>
