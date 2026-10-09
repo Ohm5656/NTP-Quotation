@@ -417,7 +417,7 @@ export async function getQuotations(
         "quotation_date",
         {
           ascending:
-            true,
+            false,
 
           nullsFirst:
             false,
