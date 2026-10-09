@@ -10,7 +10,8 @@
   "import:quotations": "tsx scripts/import-quotations.ts",
   "verify:quotations": "tsx scripts/verify-import.ts",
   "audit:quotation-archives": "tsx scripts/audit-quotation-archives.ts",
-  "import:quotation-archive-details": "tsx scripts/import-quotation-archive-details.ts"
+  "import:quotation-archive-details": "tsx scripts/import-quotation-archive-details.ts",
+  "sync:quotation-contacts": "tsx scripts/sync-quotation-contacts.ts"
 },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
