@@ -301,6 +301,7 @@ type CustomerProfileInput = {
   address: string | null;
   taxId: string | null;
   contact: string | null;
+  email: string | null;
   paymentTerm: string | null;
 };
 
@@ -383,6 +384,7 @@ async function resolveCustomer(
       ...(profile.address ? { address: profile.address } : {}),
       ...(profile.taxId ? { tax_id: profile.taxId } : {}),
       ...(profile.contact ? { contact: profile.contact } : {}),
+      ...(profile.email ? { email: profile.email } : {}),
       ...(profile.paymentTerm ? { payment_term: profile.paymentTerm } : {}),
     })
     .select(
@@ -456,6 +458,7 @@ export async function createQuotation(
     address: optionalString(formData, "customer_address"),
     taxId: optionalString(formData, "customer_tax_id"),
     contact: optionalString(formData, "attention"),
+    email,
     paymentTerm,
   };
   const lineItems = parseLineItems(formData);
@@ -747,6 +750,7 @@ async function saveCustomerProfile(
     ...(profile.address ? { address: profile.address } : {}),
     ...(profile.taxId ? { tax_id: profile.taxId } : {}),
     ...(profile.contact ? { contact: profile.contact } : {}),
+    ...(profile.email ? { email: profile.email } : {}),
     ...(profile.paymentTerm ? { payment_term: profile.paymentTerm } : {}),
   };
 
@@ -792,6 +796,7 @@ export async function updateQuotation(
     address: optionalString(formData, "customer_address"),
     taxId: optionalString(formData, "customer_tax_id"),
     contact: optionalString(formData, "attention"),
+    email,
     paymentTerm,
   };
   const lineItems = parseLineItems(formData);

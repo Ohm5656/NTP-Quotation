@@ -19,6 +19,7 @@ type CustomerProfile = {
   taxId?: string;
   address?: string;
   contact: string;
+  email?: string;
   paymentTerm: string;
 };
 
@@ -59,6 +60,7 @@ export function QuotationPreviewForm({
   const [customerAddress, setCustomerAddress] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.address ?? "");
   const [customerTaxId, setCustomerTaxId] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.taxId ?? "");
   const [attention, setAttention] = useState(quotation?.attention ?? "");
+  const [email, setEmail] = useState(quotation?.email ?? findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.email ?? "");
   const [paymentTerm, setPaymentTerm] = useState(quotation?.payment_term ?? "");
   const [projectName, setProjectName] = useState(quotation?.project_name ?? "");
   const [quotationNo, setQuotationNo] = useState((quotation?.quotation_no ?? suggestedQuotationNo ?? "").replace(/^Q\s*/i, ""));
@@ -94,6 +96,7 @@ export function QuotationPreviewForm({
     setCustomerAddress(profile?.address ?? "");
     setCustomerTaxId(profile?.taxId ?? "");
     if (profile?.contact) setAttention(profile.contact);
+    setEmail(profile?.email ?? "");
   }
 
   const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[28px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
@@ -162,7 +165,7 @@ export function QuotationPreviewForm({
 
         <section className="mt-4 grid gap-3 border-t border-[#0f172a] pt-3 sm:grid-cols-2">
           <label className="text-xs text-[#344054]">PO (ข้อมูลอ้างอิงภายใน)<input name="po" defaultValue={quotation?.po ?? ""} className="ml-2 h-7 w-44 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
-          <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" defaultValue={quotation?.email ?? ""} className="ml-2 h-7 w-52 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
+          <label className="text-xs text-[#344054]">E-mail ผู้ติดต่อ<input name="email" type="email" value={email} onChange={(event) => setEmail(event.currentTarget.value)} className="ml-2 h-7 w-52 border-0 border-b border-dotted border-[#98a2b3] bg-[#fffef8] px-1 outline-none hover:bg-[#fff8d8] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></label>
         </section>
 
         <footer className="worksheet-signature mt-5 grid grid-cols-2 border-t border-[#0f172a] pt-5 text-[18px] leading-tight">

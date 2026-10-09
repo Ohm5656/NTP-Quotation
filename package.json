@@ -11,7 +11,8 @@
   "verify:quotations": "tsx scripts/verify-import.ts",
   "audit:quotation-archives": "tsx scripts/audit-quotation-archives.ts",
   "import:quotation-archive-details": "tsx scripts/import-quotation-archive-details.ts",
-  "sync:quotation-contacts": "tsx scripts/sync-quotation-contacts.ts"
+  "sync:quotation-contacts": "tsx scripts/sync-quotation-contacts.ts",
+  "backfill:customer-profiles": "tsx scripts/backfill-customer-profiles.ts"
 },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

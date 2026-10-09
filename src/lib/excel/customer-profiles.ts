@@ -19,6 +19,7 @@ export type CustomerProfile = {
   taxId: string;
   address: string;
   contact: string;
+  email: string;
   paymentTerm: string;
 };
 
@@ -56,6 +57,7 @@ async function getSpreadsheetCustomerProfiles(): Promise<CustomerProfile[]> {
       name,
       address: cellText(row.getCell(3).value),
       contact: cellText(row.getCell(4).value),
+      email: "",
       paymentTerm: cellText(row.getCell(5).value),
     });
   }
@@ -70,7 +72,7 @@ async function getSavedCustomerProfiles(): Promise<CustomerProfile[]> {
   for (let from = 0; ; from += batchSize) {
     const { data, error } = await supabase
       .from("customers")
-      .select("name, tax_id, address, contact, payment_term")
+      .select("name, tax_id, address, contact, email, payment_term")
       .range(from, from + batchSize - 1);
 
     if (error) {
@@ -84,6 +86,7 @@ async function getSavedCustomerProfiles(): Promise<CustomerProfile[]> {
         taxId: customer.tax_id?.trim() ?? "",
         address: customer.address?.trim() ?? "",
         contact: customer.contact?.trim() ?? "",
+        email: customer.email?.trim() ?? "",
         paymentTerm: customer.payment_term?.trim() ?? "",
       })).filter((profile) => profile.name),
     );
@@ -105,6 +108,7 @@ function mergeCustomerProfile(
     taxId: savedProfile.taxId || spreadsheetProfile.taxId,
     address: savedProfile.address || spreadsheetProfile.address,
     contact: savedProfile.contact || spreadsheetProfile.contact,
+    email: savedProfile.email || spreadsheetProfile.email,
     paymentTerm: savedProfile.paymentTerm || spreadsheetProfile.paymentTerm,
   };
 }

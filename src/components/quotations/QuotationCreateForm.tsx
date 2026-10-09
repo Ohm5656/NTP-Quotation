@@ -50,6 +50,7 @@ type Props = {
   customerProfiles?: Array<{
     name: string;
     contact: string;
+    email: string;
     paymentTerm: string;
   }>;
 
@@ -156,12 +157,14 @@ export function QuotationCreateForm({
 
     const attention = document.getElementById("attention") as HTMLInputElement | null;
     const paymentTerm = document.getElementById("payment_term") as HTMLInputElement | null;
+    const email = document.getElementById("email") as HTMLInputElement | null;
     if (attention && !attention.value.trim() && profile.contact) attention.value = profile.contact;
     if (paymentTerm && !paymentTerm.value.trim() && profile.paymentTerm) {
       paymentTerm.value = /วัน|เครดิต|ชำระ/i.test(profile.paymentTerm)
         ? profile.paymentTerm
         : `เครดิต ${profile.paymentTerm} วัน`;
     }
+    if (email) email.value = profile.email ?? "";
   }
 
   /*
