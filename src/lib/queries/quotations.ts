@@ -424,10 +424,10 @@ export async function getQuotations(
         },
       )
       .order(
-        "source_row",
+        "quotation_no",
         {
           ascending:
-            false,
+            true,
         },
       )
       .range(
