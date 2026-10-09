@@ -11,6 +11,7 @@ import {
 } from "@/app/quotations/actions";
 import { QuotationLineItemsEditor } from "@/components/quotations/QuotationLineItemsEditor";
 import { findLinkedCustomerProfile } from "@/lib/customer-profile-links";
+import { findContactEmail, type ContactOption } from "@/lib/contact-options";
 import { formatThaiDate } from "@/lib/format";
 import type { CustomerOption, QuotationListItem } from "@/types/database";
 
@@ -27,7 +28,7 @@ type Props = {
   customers: CustomerOption[];
   customerProfiles?: CustomerProfile[];
   paymentTerms?: string[];
-  contacts?: string[];
+  contacts?: ContactOption[];
   defaultDate: string;
   suggestedQuotationNo?: string;
   quotation?: QuotationListItem;
@@ -60,10 +61,12 @@ export function QuotationPreviewForm({
   const [customerAddress, setCustomerAddress] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.address ?? "");
   const [customerTaxId, setCustomerTaxId] = useState(() => findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.taxId ?? "");
   const [attention, setAttention] = useState(quotation?.attention ?? "");
-  const [email, setEmail] = useState(quotation?.email ?? findLinkedCustomerProfile(customerProfiles, quotation?.customer_name_raw)?.email ?? "");
+  const [email, setEmail] = useState(quotation?.email ?? "");
   const [paymentTerm, setPaymentTerm] = useState(quotation?.payment_term ?? "");
   const [projectName, setProjectName] = useState(quotation?.project_name ?? "");
   const [quotationNo, setQuotationNo] = useState((quotation?.quotation_no ?? suggestedQuotationNo ?? "").replace(/^Q\s*/i, ""));
+  const [quotationDate, setQuotationDate] = useState(quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate);
+  const [manualQuotationNo, setManualQuotationNo] = useState(Boolean(quotation));
   const [state, formAction, pending] = useActionState(
     quotation
       ? updateQuotation.bind(null, quotation.id, quotation.customer_id)
@@ -80,7 +83,7 @@ export function QuotationPreviewForm({
     [customerProfiles, paymentTerms],
   );
   const contactOptions = useMemo(
-    () => Array.from(new Set([...contacts, ...customerProfiles.map((profile) => profile.contact)].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th")),
+    () => Array.from(new Set([...contacts.map((contact) => contact.name), ...customerProfiles.map((profile) => profile.contact)].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th")),
     [contacts, customerProfiles],
   );
 
@@ -90,13 +93,30 @@ export function QuotationPreviewForm({
     router.refresh();
   }, [state.success, onSuccess, router]);
 
+  useEffect(() => {
+    if (manualQuotationNo || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(quotationDate)) return;
+    const controller = new AbortController();
+    fetch(`/api/quotations/next-number?date=${encodeURIComponent(quotationDate)}`, { signal: controller.signal, cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (data?.quotationNo) setQuotationNo(data.quotationNo); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [isEditing, manualQuotationNo, quotationDate]);
+
   function chooseCustomer(name: string) {
     setCustomerName(name);
     const profile = findLinkedCustomerProfile(customerProfiles, name);
     setCustomerAddress(profile?.address ?? "");
     setCustomerTaxId(profile?.taxId ?? "");
-    if (profile?.contact) setAttention(profile.contact);
-    setEmail(profile?.email ?? "");
+    setAttention(profile?.contact ?? "");
+    setEmail(profile?.contact ? findContactEmail(contacts, profile.contact, name) ?? profile.email ?? "" : "");
+  }
+
+  function chooseContact(name: string) {
+    setAttention(name);
+    const profile = findLinkedCustomerProfile(customerProfiles, customerName);
+    setEmail(findContactEmail(contacts, name, customerName)
+      ?? (profile?.contact === name ? profile.email : "") ?? "");
   }
 
   const fieldClass = "h-8 w-full border-0 border-b border-dotted border-[#5270a9] bg-[#fffef8] px-1 text-[28px] text-[#111827] outline-none transition hover:bg-[#fff8d8] focus:border-solid focus:border-[#217346] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]";
@@ -108,6 +128,7 @@ export function QuotationPreviewForm({
           {state.error}
         </div>
       )}
+      {state.fieldErrors && <div role="alert" className="mx-auto mb-3 max-w-[1120px] bg-[#fff4f5] px-4 py-3 text-sm text-[#b80017]">{Object.values(state.fieldErrors).filter(Boolean).map((error) => <p key={error}>{error}</p>)}</div>}
 
       <article className="quotation-worksheet mx-auto w-full max-w-[1120px] overflow-hidden border border-[#111827] bg-white px-3 py-4 text-[#111] shadow-[0_10px_35px_rgba(16,24,40,0.22)] sm:px-5 sm:py-5">
         <div className="mb-3 flex items-center justify-between border-b border-[#cbd5e1] pb-2 font-sans text-xs text-[#667085]">
@@ -133,13 +154,13 @@ export function QuotationPreviewForm({
             <datalist id="preview-customer-options">{customerOptions.map((name) => <option key={name} value={name} />)}</datalist>
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><span /><input name="customer_address" value={customerAddress} onChange={(event) => setCustomerAddress(event.currentTarget.value)} className={`${fieldClass} text-sm`} placeholder="กรอกที่อยู่ลูกค้า" /></div>
             <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">เลขประจำตัวผู้เสียภาษี :</label><input name="customer_tax_id" value={customerTaxId} onChange={(event) => setCustomerTaxId(event.currentTarget.value)} className={`${fieldClass} text-xs`} placeholder="กรอกเลขผู้เสียภาษี" /></div>
-            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => setAttention(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
+            <div className="grid grid-cols-[132px_1fr] items-end gap-2"><label className="text-xs font-bold text-[#003b84]">ผู้ติดต่อ :</label><input name="attention" value={attention} onChange={(event) => chooseContact(event.currentTarget.value)} list="preview-contact-options" className={fieldClass} placeholder="ชื่อผู้ติดต่อ" /></div>
             <datalist id="preview-contact-options">{contactOptions.map((contact) => <option key={contact} value={contact} />)}</datalist>
           </div>
 
           <div className="space-y-2 text-[#003b84]">
-            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" defaultValue={quotation?.quotation_date ? formatThaiDate(quotation.quotation_date) : defaultDate} className={fieldClass} placeholder="06/10/2569" /></div>
-            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" value={quotationNo} onChange={(event) => setQuotationNo(event.currentTarget.value.replace(/^Q\s*/i, ""))} className={`${fieldClass} font-bold`} aria-label="Quotation number" /></div></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Date :</label><input name="quotation_date" value={quotationDate} onChange={(event) => setQuotationDate(event.currentTarget.value)} className={fieldClass} /></div>
+            <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">Quotation No :</label><div className="flex items-end"><span className="pb-1 font-bold">Q</span><input name="quotation_no" value={quotationNo} onChange={(event) => { const value = event.currentTarget.value.replace(/^Q\s*/i, ""); setQuotationNo(value); setManualQuotationNo(Boolean(value)); }} className={`${fieldClass} font-bold`} aria-label="Quotation number" /></div></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="font-bold">อ้างอิง BOQ :</label><div className="flex items-end"><span className="pb-1 font-bold">BOQ</span><input name="boq_no" defaultValue={quotation?.boq_no ?? ""} className={fieldClass} aria-label="BOQ number" /></div></div>
             <div className="grid grid-cols-[170px_1fr] items-end gap-2"><label className="text-xs font-bold">เงื่อนไขการชำระเงิน :</label><input name="payment_term" value={paymentTerm} onChange={(event) => setPaymentTerm(event.currentTarget.value)} list="preview-payment-options" className={fieldClass} /></div>
             <datalist id="preview-payment-options">{termOptions.map((term) => <option key={term} value={term} />)}</datalist>

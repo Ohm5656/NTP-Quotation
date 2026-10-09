@@ -70,7 +70,7 @@ function sourceEmail(source: ArchiveQuotation): string | null {
     ?? null;
 }
 
-async function loadQuotations(supabase: ReturnType<typeof createClient<any>>): Promise<DatabaseQuotation[]> {
+async function loadQuotations(supabase: import("@supabase/supabase-js").SupabaseClient): Promise<DatabaseQuotation[]> {
   const rows: DatabaseQuotation[] = [];
   for (let from = 0; ; from += 1_000) {
     const { data, error } = await supabase

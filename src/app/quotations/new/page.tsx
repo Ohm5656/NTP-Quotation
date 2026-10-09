@@ -6,11 +6,15 @@ import {
 
 import {
   getCustomerOptions,
+  getContactOptions,
+  getPaymentTermOptions,
+  getNextQuotationNumber,
 } from "@/lib/queries/quotations";
 
 import {
-  QuotationCreateForm,
-} from "@/components/quotations/QuotationCreateForm";
+  NewQuotationForm,
+} from "@/components/quotations/NewQuotationForm";
+import { getCustomerProfiles } from "@/lib/excel/customer-profiles";
 
 function getCurrentThaiDate(): string {
   const formatter =
@@ -68,11 +72,11 @@ function getCurrentThaiDate(): string {
 }
 
 export default async function NewQuotationPage() {
-  const customers =
-    await getCustomerOptions();
-
   const defaultDate =
     getCurrentThaiDate();
+  const [customers, customerProfiles, contacts, paymentTerms, suggestedQuotationNo] = await Promise.all([
+    getCustomerOptions(), getCustomerProfiles(), getContactOptions(), getPaymentTermOptions(), getNextQuotationNumber(defaultDate),
+  ]);
 
   return (
     <div
@@ -154,14 +158,17 @@ export default async function NewQuotationPage() {
         </p>
       </div>
 
-      <QuotationCreateForm
+      <NewQuotationForm
         customers={
           customers
         }
         defaultDate={
           defaultDate
         }
-        mode="page"
+        customerProfiles={customerProfiles}
+        contacts={contacts}
+        paymentTerms={paymentTerms}
+        suggestedQuotationNo={suggestedQuotationNo}
       />
     </div>
   );

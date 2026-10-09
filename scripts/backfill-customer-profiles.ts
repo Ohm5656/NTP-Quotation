@@ -126,7 +126,7 @@ async function loadSpreadsheetProfiles(): Promise<SpreadsheetProfile[]> {
   return profiles;
 }
 
-async function loadAll<T>(supabase: ReturnType<typeof createClient<any>>, table: "quotations" | "customers", columns: string): Promise<T[]> {
+async function loadAll<T>(supabase: import("@supabase/supabase-js").SupabaseClient, table: "quotations" | "customers", columns: string): Promise<T[]> {
   const results: T[] = [];
   for (let from = 0; ; from += 1_000) {
     const { data, error } = await supabase.from(table).select(columns).range(from, from + 999);

@@ -237,6 +237,23 @@ function parseAmount(
   );
 }
 
+function quotationIdentity(value: string): string {
+  const normalized = normalizeQuotationNo(value);
+  const match = normalized.match(/^(\d{7})(?:\s*(?:rev\.?|r\.?)\s*0*(\d+))?$/i);
+  return match ? `${match[1]}:${Number(match[2] ?? 0)}` : normalized.toLowerCase();
+}
+
+async function quotationNumberInUse(value: string, exceptId?: string): Promise<boolean> {
+  const normalized = normalizeQuotationNo(value);
+  const base = normalized.match(/^\d{7}/)?.[0];
+  if (!base) return false;
+  const { data, error } = await createAdminSupabaseClient().from("quotations")
+    .select("id, quotation_no").is("deleted_at", null)
+    .or(`quotation_no.ilike.${base}%,quotation_no.ilike.Q${base}%`);
+  if (error) throw new Error(error.message);
+  return (data ?? []).some((quote) => quote.id !== exceptId && quotationIdentity(quote.quotation_no ?? "") === quotationIdentity(normalized));
+}
+
 type ParsedLineItem = {
   line_no: number;
   description: string;
@@ -246,24 +263,31 @@ type ParsedLineItem = {
   show_item_number: boolean;
 };
 
+function parseVatRate(value: string): number | null {
+  if (!value.trim()) return null;
+  const rate = Number(value.replace(/[,\s]/g, ""));
+  return Number.isFinite(rate) && rate >= 0 ? Math.round(rate * 10000) / 10000 : null;
+}
+
 function parseLineItems(formData: FormData): ParsedLineItem[] | null {
   const raw = getString(formData, "line_items_json");
   if (!raw) return [];
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed) || parsed.length > 500) return null;
 
-    return parsed.slice(0, 50).map((item, index) => {
+    return parsed.map((item, index) => {
       if (!item || typeof item !== "object") throw new Error("Invalid line item");
       const record = item as Record<string, unknown>;
       const description = typeof record.description === "string" ? record.description.trim() : "";
-      if (!description) throw new Error("Missing description");
+      if (!description || /^-\s*$/.test(description)) throw new Error("Missing description");
 
       const amountValue = record.unit_price === null || record.unit_price === undefined ? "" : String(record.unit_price);
       const quantityValue = record.quantity === null || record.quantity === undefined ? "" : String(record.quantity);
       const unitPrice = parseAmount(amountValue);
-      const quantity = parseAmount(quantityValue);
+      const rawQuantity = Number(quantityValue.replace(/[,\s]/g, ""));
+      const quantity = quantityValue && Number.isFinite(rawQuantity) && rawQuantity >= 0 ? Math.round(rawQuantity * 1000) / 1000 : null;
       if ((amountValue && unitPrice === null) || (quantityValue && quantity === null)) throw new Error("Invalid amount");
 
       return {
@@ -271,7 +295,7 @@ function parseLineItems(formData: FormData): ParsedLineItem[] | null {
         description,
         unit_price: unitPrice,
         quantity,
-        unit: typeof record.unit === "string" && record.unit.trim() ? record.unit.trim() : null,
+        unit: typeof record.unit === "string" && record.unit.trim() ? record.unit.trim().toUpperCase() : null,
         show_item_number: record.show_item_number !== false,
       };
     });
@@ -464,7 +488,7 @@ export async function createQuotation(
   const lineItems = parseLineItems(formData);
   const remarks = optionalString(formData, "remarks");
   const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
-  const vatRate = parseAmount(getString(formData, "vat_rate")) ?? 0.07;
+  const vatRate = parseVatRate(getString(formData, "vat_rate")) ?? 0.07;
 
   const fieldErrors:
     CreateQuotationState["fieldErrors"] =
@@ -504,11 +528,18 @@ export async function createQuotation(
       "กรุณากรอกชื่องาน";
   }
 
-  if (lineItems === null || lineItems.length === 0) {
+  if (lineItems === null) return { success: false, error: "กรุณาตรวจชื่อรายการ ราคา และจำนวนให้ถูกต้อง (สูงสุด 500 บรรทัด)" };
+  if (lineItems.length === 0) {
     return {
       success: false,
       error: "กรุณาเพิ่มรายละเอียดสินค้า หรือบริการอย่างน้อย 1 รายการ",
     };
+  }
+
+  if (quotationNoRaw && !/^\d{7}(?:\s*(?:rev\.?|r\.?)\s*\d+)?$/i.test(normalizeQuotationNo(quotationNoRaw))) {
+    fieldErrors.quotationNo = "เลขใบเสนอราคาต้องมี 7 หลัก และเพิ่ม r1 หรือ Rev.01 ต่อท้ายได้";
+  } else if (quotationNoRaw && await quotationNumberInUse(quotationNoRaw)) {
+    fieldErrors.quotationNo = "เลขใบเสนอราคานี้มีอยู่แล้ว กรุณาใช้เลขถัดไป หรือเพิ่มเลข Revision";
   }
 
   const enteredTotalAmount =
@@ -750,7 +781,7 @@ async function saveCustomerProfile(
     ...(profile.address ? { address: profile.address } : {}),
     ...(profile.taxId ? { tax_id: profile.taxId } : {}),
     ...(profile.contact ? { contact: profile.contact } : {}),
-    ...(profile.email ? { email: profile.email } : {}),
+    ...(profile.contact ? { email: profile.email } : profile.email ? { email: profile.email } : {}),
     ...(profile.paymentTerm ? { payment_term: profile.paymentTerm } : {}),
   };
 
@@ -802,8 +833,17 @@ export async function updateQuotation(
   const lineItems = parseLineItems(formData);
   const remarks = optionalString(formData, "remarks");
   const discountAmount = parseAmount(getString(formData, "discount_amount")) ?? 0;
-  const vatRate = parseAmount(getString(formData, "vat_rate")) ?? 0.07;
+  const vatRate = parseVatRate(getString(formData, "vat_rate")) ?? 0.07;
   const fieldErrors: CreateQuotationState["fieldErrors"] = {};
+
+  if (quotationNoRaw) {
+    const { data: original } = await createAdminSupabaseClient().from("quotations").select("quotation_no").eq("id", quotationId).maybeSingle();
+    // Preserve imported duplicate/irregular historical numbers when unchanged.
+    if (quotationIdentity(original?.quotation_no ?? "") !== quotationIdentity(quotationNoRaw)
+      && await quotationNumberInUse(quotationNoRaw, quotationId)) {
+      fieldErrors.quotationNo = "เลขใบเสนอราคานี้มีอยู่แล้ว กรุณาใช้เลขถัดไป หรือเพิ่มเลข Revision";
+    }
+  }
 
   const quotationDate = parseThaiDate(quotationDateRaw);
   if (quotationDateRaw && !quotationDate) {
@@ -823,7 +863,7 @@ export async function updateQuotation(
     return { success: false, error: "ข้อมูลรายการสินค้าไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง" };
   }
 
-  const totalAmount = lineItems.length
+  const totalAmount = lineItems.some((item) => item.unit_price !== null || item.quantity !== null)
     ? calculateQuotationTotal(lineItems, discountAmount, vatRate)
     : enteredTotalAmount;
 
@@ -896,24 +936,20 @@ export async function updateQuotation(
     };
   }
 
-  const { error: deleteItemsError } = await supabase
-    .from("quotation_line_items")
-    .delete()
-    .eq("quotation_id", quotationId);
-
-  if (deleteItemsError) {
-    return { success: false, error: `ไม่สามารถอัปเดตรายการสินค้าได้: ${deleteItemsError.message}` };
-  }
-
   if (lineItems.length) {
     const { error: insertItemsError } = await supabase
       .from("quotation_line_items")
-      .insert(lineItems.map((item) => ({ ...item, quotation_id: quotationId })));
+      .upsert(lineItems.map((item) => ({ ...item, quotation_id: quotationId })), { onConflict: "quotation_id,line_no" });
 
     if (insertItemsError) {
       return { success: false, error: `ไม่สามารถบันทึกรายการสินค้าได้: ${insertItemsError.message}` };
     }
   }
+
+  // Keep old line items intact until their replacements have been saved.
+  const { error: deleteItemsError } = await supabase.from("quotation_line_items")
+    .delete().eq("quotation_id", quotationId).gt("line_no", lineItems.length);
+  if (deleteItemsError) return { success: false, error: `ไม่สามารถอัปเดตรายการสินค้าได้: ${deleteItemsError.message}` };
 
   revalidatePath("/");
   revalidatePath("/quotations");

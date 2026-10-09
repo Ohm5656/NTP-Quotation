@@ -28,12 +28,20 @@ const CUSTOMER_PROFILE_ALIASES = new Map<string, string>([
   ["ART OF BAKING COMPANY LIMITED", "อาร์ต ออฟ เบคกิ้ง จำกัด"],
 ].map(([alias, profile]) => [normalizeCustomerProfileKey(alias), normalizeCustomerProfileKey(profile)]));
 
+export function customerProfileIdentityKey(value: string | null | undefined): string {
+  const key = normalizeCustomerProfileKey(value);
+  return CUSTOMER_PROFILE_ALIASES.get(key) ?? key;
+}
+
 export function findLinkedCustomerProfile<T extends NamedCustomerProfile>(
   profiles: T[],
   customerName: string | null | undefined,
 ): T | undefined {
   const sourceKey = normalizeCustomerProfileKey(customerName);
   if (!sourceKey) return undefined;
+
+  const exactMatches = profiles.filter((profile) => profile.name.trim().toLocaleLowerCase("th") === customerName?.trim().toLocaleLowerCase("th"));
+  if (exactMatches.length === 1) return exactMatches[0];
 
   const directMatches = profiles.filter((profile) => normalizeCustomerProfileKey(profile.name) === sourceKey);
   if (directMatches.length === 1) return directMatches[0];

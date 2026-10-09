@@ -37,7 +37,7 @@ type Props = {
 
   paymentTerms?: string[];
 
-  contacts?: string[];
+  contacts?: import("@/lib/contact-options").ContactOption[];
 };
 
 export function QuotationTable({

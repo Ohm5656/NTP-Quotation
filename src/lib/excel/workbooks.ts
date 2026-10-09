@@ -11,7 +11,6 @@ import type {
 } from "@/types/database";
 
 import {
-  defaultPaymentTerm,
   findCustomerProfile,
   getCustomerProfiles,
 } from "@/lib/excel/customer-profiles";
@@ -37,7 +36,6 @@ export type ExportQuotation = {
 
 const TEMPLATE_DIR = path.join(process.cwd(), "templates", "excel");
 const INITIAL_LINE_COUNT = 12;
-const MAX_LINE_COUNT = 50;
 const FIRST_LINE_ROW = 18;
 const REGISTER_FIRST_DATA_ROW = 2;
 
@@ -53,12 +51,12 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function thaiIntegerText(value: number): string {
+function thaiIntegerText(value: number, hasHigherPlaces = false): string {
   if (value === 0) return "ศูนย์";
   if (value >= 1_000_000) {
     const millions = Math.floor(value / 1_000_000);
     const remainder = value % 1_000_000;
-    return `${thaiIntegerText(millions)}ล้าน${remainder ? thaiIntegerText(remainder) : ""}`;
+    return `${thaiIntegerText(millions, hasHigherPlaces)}ล้าน${remainder ? thaiIntegerText(remainder, true) : ""}`;
   }
 
   const text = String(value);
@@ -67,7 +65,7 @@ function thaiIntegerText(value: number): string {
     if (!digit) return "";
 
     const place = text.length - index - 1;
-    if (place === 0 && digit === 1 && text.length > 1) return "เอ็ด";
+    if (place === 0 && digit === 1 && (text.length > 1 || hasHigherPlaces)) return "เอ็ด";
     if (place === 1 && digit === 1) return "สิบ";
     if (place === 1 && digit === 2) return "ยี่สิบ";
     return `${THAI_DIGITS[digit]}${THAI_PLACES[place]}`;
@@ -86,7 +84,7 @@ function splitRemarks(value: string | null | undefined): [string, string] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  return [lines[0] ?? "", lines.slice(1).join(" ")];
+  return [lines[0] ?? "", lines.slice(1).join("\n")];
 }
 
 function thaiExcelDate(value: string | null): Date | null {
@@ -97,6 +95,8 @@ function thaiExcelDate(value: string | null): Date | null {
 }
 
 function splitAddress(address: string): [string, string] {
+  const lines = address.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 1) return [lines[0], lines.slice(1).join(" ")];
   const clean = address.replace(/\s+/g, " ").trim();
   if (!clean) return ["", ""];
   const words = clean.split(" ");
@@ -199,7 +199,7 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
 
   const profile = findCustomerProfile(await getCustomerProfiles(), quotation.customer_name_raw);
   const [addressLineOne, addressLineTwo] = splitAddress(profile?.address ?? "");
-  const paymentTerm = quotation.payment_term?.trim() || defaultPaymentTerm(profile?.paymentTerm);
+  const paymentTerm = quotation.payment_term?.trim() ?? "";
 
   // Keep the quotation's original display name (for example, an English legal name)
   // while still using the linked profile for address and tax data.
@@ -207,22 +207,24 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   sheet.getCell("C11").value = addressLineOne;
   sheet.getCell("C12").value = addressLineTwo;
   sheet.getCell("C13").value = profile?.taxId ? `เลขประจำตัวผู้เสียภาษี : ${profile.taxId}` : "เลขประจำตัวผู้เสียภาษี :";
-  sheet.getCell("C14").value = quotation.attention?.trim() || profile?.contact || "";
+  sheet.getCell("C14").value = quotation.attention?.trim() ?? "";
   sheet.getCell("F10").value = dateOrBlank(quotation.quotation_date);
-  sheet.getCell("F11").value = quotation.quotation_no ?? "";
-  sheet.getCell("F12").value = quotation.boq_no ?? "";
+  sheet.getCell("F11").value = prefixedRegisterText(quotation.quotation_no, "Q");
+  sheet.getCell("F12").value = prefixedRegisterText(quotation.boq_no, "BOQ");
   sheet.getCell("F13").value = paymentTerm;
   sheet.getCell("C15").value = quotation.project_name ?? "";
 
   const lineItems = [...(quotation.quotation_line_items ?? [])]
-    .sort((a, b) => a.line_no - b.line_no)
-    .slice(0, MAX_LINE_COUNT);
+    .sort((a, b) => a.line_no - b.line_no);
 
   const dataRowCount = Math.max(INITIAL_LINE_COUNT, lineItems.length);
   const summaryStartRow = FIRST_LINE_ROW + dataRowCount;
 
   if (dataRowCount > INITIAL_LINE_COUNT) {
     const extraRows = dataRowCount - INITIAL_LINE_COUNT;
+    // ExcelJS splices cell values but does not move merged-cell ranges.
+    const shiftedMerges = [...(sheet.model.merges ?? [])].filter((range) => Number(range.match(/\d+/)?.[0]) >= FIRST_LINE_ROW + INITIAL_LINE_COUNT);
+    for (const range of shiftedMerges) sheet.unMergeCells(range);
     sheet.spliceRows(
       FIRST_LINE_ROW + INITIAL_LINE_COUNT,
       0,
@@ -235,6 +237,12 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
         FIRST_LINE_ROW + INITIAL_LINE_COUNT - 1,
         FIRST_LINE_ROW + INITIAL_LINE_COUNT + index,
       );
+    }
+    for (const range of shiftedMerges) {
+      sheet.mergeCells(range.replace(/\d+/g, (row) => String(Number(row) + extraRows)));
+    }
+    if (sheet.pageSetup.printArea) {
+      sheet.pageSetup.printArea = sheet.pageSetup.printArea.replace(/(:[A-Z]+)(\d+)/g, (_match, column, row) => `${column}${Number(row) + extraRows}`);
     }
   }
 
@@ -254,20 +262,22 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
     row.getCell(3).value = item.description;
     row.getCell(4).value = item.unit_price === null ? "" : price;
     row.getCell(5).value = item.quantity === null ? "" : quantity;
-    row.getCell(6).value = item.unit ?? "";
+    row.getCell(6).value = item.unit?.toUpperCase() ?? "";
     row.getCell(7).value = item.unit_price === null || item.quantity === null
       ? ""
       : { formula: `D${rowNumber}*E${rowNumber}`, result: price * quantity };
   }
 
-  const total = roundMoney(lineItems.reduce((sum, item) => (
-    sum + finiteNumber(item.unit_price) * finiteNumber(item.quantity)
-  ), 0));
+  const hasPrices = lineItems.some((item) => item.unit_price !== null || item.quantity !== null);
   const discount = Math.max(0, roundMoney(finiteNumber(quotation.discount_amount)));
-  const subtotal = Math.max(0, roundMoney(total - discount));
   const vatRate = Math.max(0, finiteNumber(quotation.vat_rate ?? 0.07));
+  const savedTotal = roundMoney(finiteNumber(quotation.total_amount));
+  const total = hasPrices ? roundMoney(lineItems.reduce((sum, item) => (
+    sum + finiteNumber(item.unit_price) * finiteNumber(item.quantity)
+  ), 0)) : roundMoney(savedTotal / (1 + vatRate) + discount);
+  const subtotal = Math.max(0, roundMoney(total - discount));
   const vat = roundMoney(subtotal * vatRate);
-  const grandTotal = roundMoney(subtotal + vat);
+  const grandTotal = hasPrices ? roundMoney(subtotal + vat) : savedTotal;
   const totalRow = summaryStartRow;
   const discountRow = summaryStartRow + 1;
   const subtotalRow = summaryStartRow + 2;
@@ -292,10 +302,13 @@ export async function buildQuotationWorkbook(quotation: ExportQuotation): Promis
   sheet.getCell(`B${discountRow}`).value = paymentNote || (paymentTerm
     ? `เงื่อนไขการชำระเงิน : ${paymentTerm}`
     : "เงื่อนไขการชำระเงิน :");
-  sheet.getCell(`G${totalRow}`).value = {
+  sheet.getCell(`B${totalRow}`).alignment = { ...sheet.getCell(`B${totalRow}`).alignment, wrapText: true };
+  sheet.getCell(`B${discountRow}`).alignment = { ...sheet.getCell(`B${discountRow}`).alignment, wrapText: true };
+  sheet.getRow(discountRow).height = Math.max(sheet.getRow(discountRow).height ?? 25.8, 25.8 * Math.max(1, paymentNote.split("\n").length));
+  sheet.getCell(`G${totalRow}`).value = hasPrices ? {
     formula: `SUM(G${FIRST_LINE_ROW}:G${summaryStartRow - 1})`,
     result: total,
-  };
+  } : total;
   sheet.getCell(`G${discountRow}`).value = discount;
   sheet.getCell(`G${subtotalRow}`).value = {
     formula: `SUM(G${totalRow}-G${discountRow})`,

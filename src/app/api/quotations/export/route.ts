@@ -14,7 +14,8 @@ function registerOrder(quotation: ExportQuotation): [number, number, number, num
   const month = date ? Number(date[2]) : number ? Number(number[2]) : 99;
   const sequence = number ? Number(number[3]) : quotation.source_row ?? Number.MAX_SAFE_INTEGER;
   const day = date ? Number(date[3]) : 0;
-  return [year, month, sequence, day, quotation.source_row ?? Number.MAX_SAFE_INTEGER];
+  const fullNumber = number ? Number(`${number[1]}${number[2]}${number[3]}`) : sequence;
+  return [year, month, day, fullNumber, quotation.source_row ?? Number.MAX_SAFE_INTEGER];
 }
 
 function compareRegisterOrder(left: ExportQuotation, right: ExportQuotation): number {
@@ -38,6 +39,7 @@ export async function GET() {
       .is("deleted_at", null)
       .order("quotation_date", { ascending: true, nullsFirst: false })
       .order("source_row", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + BATCH_SIZE - 1);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

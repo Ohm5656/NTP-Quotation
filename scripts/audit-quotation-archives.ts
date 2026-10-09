@@ -147,7 +147,7 @@ function normalizeQuotationNo(value: string | null, sourceFile: string): string 
     ?? value?.match(/(?:Q\s*)?(\d{7})(?!\d)/i)?.[1];
   if (!number) return null;
 
-  const revision = `${value ?? ""} ${fileName}`.match(/(?:REV(?:ISION)?\.?|R)\s*0*(\d+)\b/i)?.[1];
+  const revision = `${value ?? ""} ${fileName}`.match(/(?:REV(?:ISION)?\.?|R\.?)\s*0*(\d+)\b/i)?.[1];
   return revision ? `${number} Rev.${revision.padStart(2, "0")}` : number;
 }
 
@@ -299,7 +299,7 @@ function parseQuotation(workbook: ExcelJS.Workbook, archive: string, sourceFile:
 
   const dateLabel = findLabel(sheet, /^date\s*:/i);
 
-  let customerName = textField("customerName", /^(?:customer|ลูกค้า)\s*:?$/i);
+  const customerName = textField("customerName", /^(?:customer|ลูกค้า)\s*:?$/i);
   const boqNo = textField("boqNo", /^(?:อ้างอิง\s*)?BOQ\s*:?$/i);
   const projectName = textField("projectName", /^project\s*:?$/i);
   let paymentTerm = textField("paymentTerm", /^(?:เงื่อนไขการชำระเงิน|payment\s*term)\s*:?$/i);
@@ -377,6 +377,20 @@ function parseQuotation(workbook: ExcelJS.Workbook, archive: string, sourceFile:
     }
   }
 
+  // On the current form these fields are visible values without labels.
+  // The Customer worksheet is a directory, and its first matching company
+  // row can refer to a different person than the one selected on this quote.
+  if (sheet.name === "Quotation") {
+    const visibleContact = cellText(sheet.getCell("C14"));
+    attention = visibleContact || attention;
+    if (visibleContact) fieldCells.attention = { sheet: sheet.name, address: "C14" };
+    const visibleAddress = ["C11", "C12"].map((address) => cellText(sheet.getCell(address))).filter(Boolean);
+    if (visibleAddress.length) {
+      customerAddress = visibleAddress.join("\n");
+      fieldCells.customerAddress = { sheet: sheet.name, address: "C11" };
+    }
+  }
+
   // The current worksheet links address, contact and tax id from its Customer
   // sheet. These cells do not have labels, so resolve them by the selected name.
   const customerSheet = workbook.getWorksheet("Customer");
@@ -398,13 +412,8 @@ function parseQuotation(workbook: ExcelJS.Workbook, archive: string, sourceFile:
       }
 
       const contact = cellText(customerSheet.getCell(row, 5));
-      if (!attention && contact) {
-        attention = contact;
-        fieldCells.attention = cellFor(customerSheet, row, 5);
-      }
-
       const contactEmail = cellText(customerSheet.getCell(row, 6)).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
-      if (!email && contactEmail) {
+      if (!email && contactEmail && attention && normalizedText(contact) === normalizedText(attention)) {
         email = contactEmail;
         fieldCells.email = cellFor(customerSheet, row, 6);
       }
@@ -414,7 +423,8 @@ function parseQuotation(workbook: ExcelJS.Workbook, archive: string, sourceFile:
         paymentTerm = savedPaymentTerm;
         fieldCells.paymentTerm = cellFor(customerSheet, row, 10);
       }
-      break;
+      // Continue through this company's other directory rows to find the
+      // email belonging to the actual visible contact.
     }
   }
 

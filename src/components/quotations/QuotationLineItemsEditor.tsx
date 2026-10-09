@@ -24,7 +24,7 @@ type Props = {
 };
 
 const INITIAL_LINE_COUNT = 12;
-const MAX_LINE_COUNT = 50;
+const MAX_LINE_COUNT = 500;
 
 function numberText(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === "") return "";
@@ -61,9 +61,9 @@ function makeDraft(item?: QuotationLineItem, index = 0): DraftItem {
   return {
     key: item?.id ?? `new-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
     description: item?.description ?? "",
-    unitPrice: numberText(item?.unit_price),
+    unitPrice: formatPrice(numberText(item?.unit_price)),
     quantity: numberText(item?.quantity),
-    unit: item?.unit ?? "",
+    unit: (item?.unit ?? "").toUpperCase(),
     showItemNumber: item?.show_item_number ?? true,
   };
 }
@@ -80,7 +80,6 @@ export function QuotationLineItemsEditor({
   const [items, setItems] = useState<DraftItem[]>(() => {
     const savedItems = [...initialItems]
       .sort((a, b) => a.line_no - b.line_no)
-      .slice(0, MAX_LINE_COUNT)
       .map(makeDraft);
     const blankItems = Array.from({ length: Math.max(0, INITIAL_LINE_COUNT - savedItems.length) }, (_, index) => ({
       ...makeDraft(undefined, savedItems.length + index),
@@ -114,28 +113,31 @@ export function QuotationLineItemsEditor({
   }, [lastProjectDescription, projectName]);
 
   const totals = useMemo(() => {
-    const subtotal = items.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
     const discountAmount = asNumber(discount);
-    const beforeVat = Math.max(0, subtotal - discountAmount);
     const vatRate = Math.max(0, asNumber(vatPercent)) / 100;
+    const hasAmounts = items.some((item) => item.unitPrice.trim() || item.quantity.trim());
+    const subtotal = !isNew && !hasAmounts
+      ? Number(initialTotal ?? 0) / (1 + vatRate) + discountAmount
+      : items.reduce((sum, item) => sum + asNumber(item.unitPrice) * asNumber(item.quantity), 0);
+    const beforeVat = Math.max(0, subtotal - discountAmount);
     const vat = beforeVat * vatRate;
     return { subtotal, discountAmount, vatRate, vat, grandTotal: beforeVat + vat };
-  }, [items, discount, vatPercent]);
+  }, [items, discount, vatPercent, initialTotal, isNew]);
 
   const serializedItems = JSON.stringify(
     items
-      .filter((item) => hasDescription(item.description))
+      .filter((item) => hasDescription(item.description) || item.unitPrice.trim() || item.quantity.trim() || item.unit.trim())
       .map((item, index) => ({
         line_no: index + 1,
         description: item.description.trim(),
-        unit_price: asNumber(item.unitPrice) || null,
-        quantity: asNumber(item.quantity) || null,
+        unit_price: item.unitPrice.replace(/,/g, "").trim() || null,
+        quantity: item.quantity.replace(/,/g, "").trim() || null,
         unit: item.unit.trim() || null,
         show_item_number: item.showItemNumber,
       })),
   );
-  const hasItemDetails = items.some((item) => hasDescription(item.description));
-  const submittedTotal = !isNew && !hasItemDetails
+  const hasItemAmounts = items.some((item) => item.unitPrice.trim() !== "" || item.quantity.trim() !== "");
+  const submittedTotal = !isNew && !hasItemAmounts
     ? Number(initialTotal ?? 0).toFixed(2)
     : totals.grandTotal.toFixed(2);
 
@@ -234,13 +236,17 @@ export function QuotationLineItemsEditor({
                     </div>
                   </td>
                   <td className="border-r border-[#1e293b] p-0"><textarea value={item.description} onFocus={() => setActiveItemKey(item.key)} onKeyDown={(event) => {
-                    if (isDetailLine && event.key === "Backspace" && item.description.trim() === "-") {
+                    if (isDetailLine && event.key === "Backspace" && /^(?:-)?$/.test(item.description.trim())) {
                       event.preventDefault();
                       removeDetail(item.key);
                     }
-                  }} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "หัวข้องานจาก Project" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  }} onChange={(event) => updateItem(item.key, { description: event.currentTarget.value })} rows={1} placeholder={index === 0 ? "หัวข้องานจาก Project" : isDetailLine ? "รายละเอียดเพิ่มเติมของรายการ" : "รายละเอียดสินค้า / ขอบเขตงาน"} className="block min-h-8 w-full resize-y border-0 bg-transparent px-2 py-1 leading-5 outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
                   <td className="border-r border-[#1e293b] p-0"><input value={item.unitPrice} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { unitPrice: event.currentTarget.value })} onBlur={(event) => updateItem(item.key, { unitPrice: formatPrice(event.currentTarget.value) })} inputMode="decimal" placeholder="0.00" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
-                  <td className="border-r border-[#1e293b] p-0"><input value={item.quantity} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} inputMode="decimal" placeholder="0" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
+                  <td className="border-r border-[#1e293b] p-0"><input value={item.quantity} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { quantity: event.currentTarget.value })} onBlur={(event) => {
+                    const value = event.currentTarget.value.replace(/,/g, "").trim();
+                    const quantity = Number(value);
+                    if (value && Number.isFinite(quantity) && quantity >= 0) updateItem(item.key, { quantity: conciseNumber(Math.round(quantity * 1000) / 1000) });
+                  }} inputMode="decimal" placeholder="0" className="h-8 w-full border-0 bg-transparent px-2 text-right outline-none placeholder:text-[#9aa4b2] hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
                   <td className="border-r border-[#1e293b] p-0"><input value={item.unit} onFocus={() => setActiveItemKey(item.key)} onChange={(event) => updateItem(item.key, { unit: event.currentTarget.value.toUpperCase() })} className="h-8 w-full border-0 bg-transparent px-2 uppercase outline-none hover:bg-[#fffdf0] focus:bg-[#fffbe6] focus:ring-2 focus:ring-inset focus:ring-[#217346]" /></td>
                   <td className="px-2 py-1 text-right font-semibold text-[#172033]">{lineTotal ? lineTotal.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
                 </tr>

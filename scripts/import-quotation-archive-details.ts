@@ -117,7 +117,7 @@ function profileFrom(source: ArchiveQuotation) {
 }
 
 async function loadAll<T>(
-  supabase: ReturnType<typeof createClient<any>>,
+  supabase: import("@supabase/supabase-js").SupabaseClient,
   table: "quotations" | "customers" | "quotation_line_items",
   columns: string,
 ): Promise<T[]> {

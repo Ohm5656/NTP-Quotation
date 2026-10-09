@@ -17,6 +17,7 @@ import {
 import {
   QuotationPreviewForm,
 } from "@/components/quotations/QuotationPreviewForm";
+import type { ContactOption } from "@/lib/contact-options";
 
 import type {
   CustomerOption,
@@ -28,7 +29,7 @@ type Props = {
   customers: CustomerOption[];
   customerProfiles?: Array<{ name: string; contact: string; paymentTerm: string }>;
   paymentTerms?: string[];
-  contacts?: string[];
+  contacts?: ContactOption[];
 };
 
 export function EditQuotationButton({

@@ -33,6 +33,7 @@ import {
 import {
   findLinkedCustomerProfile,
 } from "@/lib/customer-profile-links";
+import { findContactEmail, type ContactOption } from "@/lib/contact-options";
 
 import {
   QuotationLineItemsEditor,
@@ -56,7 +57,7 @@ type Props = {
 
   paymentTerms?: string[];
 
-  contacts?: string[];
+  contacts?: ContactOption[];
 
   defaultDate: string;
 
@@ -147,7 +148,7 @@ export function QuotationCreateForm({
   ].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th"));
 
   const contactOptions = Array.from(new Set([
-    ...contacts,
+    ...contacts.map((contact) => contact.name),
     ...customerProfiles.map((profile) => profile.contact.trim()),
   ].filter(Boolean))).sort((a, b) => a.localeCompare(b, "th"));
 
@@ -1165,6 +1166,11 @@ export function QuotationCreateForm({
                   name="attention"
                   type="text"
                   list="contact-options"
+                  onChange={(event) => {
+                    const customerName = (event.currentTarget.form?.elements.namedItem("customer_name") as HTMLInputElement | null)?.value ?? "";
+                    const emailInput = event.currentTarget.form?.elements.namedItem("email") as HTMLInputElement | null;
+                    if (emailInput) emailInput.value = findContactEmail(contacts, event.currentTarget.value, customerName) ?? "";
+                  }}
                   defaultValue={
                     quotation?.attention ??
                     ""

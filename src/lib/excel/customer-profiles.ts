@@ -119,16 +119,15 @@ export async function getCustomerProfiles(): Promise<CustomerProfile[]> {
     getSavedCustomerProfiles(),
   ]);
 
-  const mergedProfiles = spreadsheetProfiles.map((profile) =>
-    mergeCustomerProfile(
-      profile,
-      findLinkedCustomerProfile(savedProfiles, profile.name),
-    ),
-  );
-
-  for (const savedProfile of savedProfiles) {
-    if (!findLinkedCustomerProfile(spreadsheetProfiles, savedProfile.name)) {
-      mergedProfiles.push(savedProfile);
+  // Keep every saved display name, including English aliases. Dropping an
+  // alias here also drops the contact/email the user just saved for that name.
+  const mergedProfiles = savedProfiles.map((savedProfile) => {
+    const template = findLinkedCustomerProfile(spreadsheetProfiles, savedProfile.name);
+    return template ? { ...mergeCustomerProfile(template, savedProfile), name: savedProfile.name } : savedProfile;
+  });
+  for (const spreadsheetProfile of spreadsheetProfiles) {
+    if (!mergedProfiles.some((profile) => normalizeCustomerName(profile.name) === normalizeCustomerName(spreadsheetProfile.name))) {
+      mergedProfiles.push(spreadsheetProfile);
     }
   }
 

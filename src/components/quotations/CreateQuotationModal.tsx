@@ -18,6 +18,7 @@ import {
 import {
   QuotationPreviewForm,
 } from "@/components/quotations/QuotationPreviewForm";
+import type { ContactOption } from "@/lib/contact-options";
 
 import type {
   CustomerOption,
@@ -35,7 +36,7 @@ type Props = {
 
   paymentTerms?: string[];
 
-  contacts?: string[];
+  contacts?: ContactOption[];
 
   defaultDate: string;
 

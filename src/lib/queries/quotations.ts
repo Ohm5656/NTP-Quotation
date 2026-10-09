@@ -528,7 +528,7 @@ export async function getNextQuotationNumber(
       .from("quotations")
       .select("quotation_no")
       .is("deleted_at", null)
-      .ilike("quotation_no", `${prefix}%`)
+      .or(`quotation_no.ilike.${prefix}%,quotation_no.ilike.Q${prefix}%`)
       .range(
         from,
         from + FETCH_BATCH_SIZE - 1,
@@ -541,7 +541,7 @@ export async function getNextQuotationNumber(
     }
 
     const batch = data ?? [];
-    const numberPattern = new RegExp(`^${prefix}(\\d{3})(?:R\\d*)?$`, "i");
+    const numberPattern = new RegExp(`^(?:Q\\s*)?${prefix}(\\d{3})(?:\\s*(?:Rev\\.?|R\\.?)\\s*\\d*)?$`, "i");
 
     for (const quotation of batch) {
       const match = quotation.quotation_no?.trim().match(numberPattern);
@@ -654,16 +654,24 @@ export async function getPaymentTermOptions(): Promise<string[]> {
   }
 }
 
-export async function getContactOptions(): Promise<string[]> {
+export async function getContactOptions(): Promise<import("@/lib/contact-options").ContactOption[]> {
   const supabase = createAdminSupabaseClient();
-  const contacts = new Set<string>();
+  const contacts: import("@/lib/contact-options").ContactOption[] = [];
+  const seen = new Set<string>();
+  const { data: profiles, error: profileError } = await supabase.from("customers").select("name, contact, email, updated_at");
+  if (profileError) throw new Error(`Unable to load remembered contact emails: ${profileError.message}`);
+  for (const profile of profiles ?? []) {
+    if (profile.contact?.trim()) contacts.push({ name: profile.contact.trim(), email: profile.email?.trim() ?? "", customerName: profile.name, updatedAt: profile.updated_at });
+  }
 
   for (let from = 0; ; from += FETCH_BATCH_SIZE) {
     const { data, error } = await supabase
       .from("quotations")
-      .select("attention")
+      .select("attention, email, customer_name_raw, updated_at")
       .is("deleted_at", null)
       .not("attention", "is", null)
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: true })
       .range(from, from + FETCH_BATCH_SIZE - 1);
 
     if (error) {
@@ -673,11 +681,17 @@ export async function getContactOptions(): Promise<string[]> {
     const batch = data ?? [];
     for (const row of batch) {
       const contact = typeof row.attention === "string" ? row.attention.trim() : "";
-      if (contact) contacts.add(contact);
+      const email = row.email?.trim() ?? "";
+      const customerName = row.customer_name_raw?.trim() ?? "";
+      const key = JSON.stringify([contact, email.toLowerCase(), customerName]);
+      if (contact && !seen.has(key)) {
+        seen.add(key);
+        contacts.push({ name: contact, email, customerName, updatedAt: row.updated_at ?? undefined });
+      }
     }
 
     if (batch.length < FETCH_BATCH_SIZE) {
-      return [...contacts].sort((a, b) => a.localeCompare(b, "th"));
+      return contacts.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
     }
   }
 }
