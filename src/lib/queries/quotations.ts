@@ -414,7 +414,7 @@ export async function getQuotations(
   } =
     await query
       .order(
-        "quotation_no",
+        "quotation_date",
         {
           ascending:
             true,
@@ -424,10 +424,10 @@ export async function getQuotations(
         },
       )
       .order(
-        "quotation_date",
+        "quotation_no",
         {
           ascending:
-            false,
+            true,
         },
       )
       .order(
