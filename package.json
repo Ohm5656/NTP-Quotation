@@ -12,7 +12,8 @@
   "audit:quotation-archives": "tsx scripts/audit-quotation-archives.ts",
   "import:quotation-archive-details": "tsx scripts/import-quotation-archive-details.ts",
   "sync:quotation-contacts": "tsx scripts/sync-quotation-contacts.ts",
-  "backfill:customer-profiles": "tsx scripts/backfill-customer-profiles.ts"
+  "backfill:customer-profiles": "tsx scripts/backfill-customer-profiles.ts",
+  "normalize:mayekawa-contact": "tsx scripts/set-mayekawa-primary-contact.ts"
 },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
